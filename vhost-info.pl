@@ -52,11 +52,15 @@ for (@all_conf) {
                 printf "%15s: %s\n",$direc->name,$direc->value
                   unless ($direc->name eq 'ServerName' || $direc->name eq 'ServerAlias');
             }
-        } else {
+        } elsif ( -d $DR ) {
             if ($DocumentRoots{$DR} == 1) {
                 my $du_size = du ( { 'Human-readable' => 1 } , $DR ); # Divides by 1000. Use lowercase to divide by 1024.
                 printf "%15s: %s\n", "Dir Size", $du_size ;
             }
+        } else {
+            printf "%15s: %s\n", "***Warning***", "DocumentRoot does not exist!";
+            $DocumentRoots{$DR}--;  # Decrement to put the entry at the bottom of the list when printing.
+                                    #   Comment out if you want to know how many sites depend on this folder
         }
         print "\n";
     }
@@ -66,5 +70,5 @@ print "\nDocument Roots to be aware of:\n\n";
 foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
 {
     #printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
-    print "$_\n" unless $_ eq "None";
+    printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
 }
