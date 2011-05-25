@@ -32,7 +32,7 @@ printf "%15s %s\n%15s %s\n%15s %s\n%15s %s\n\n",
 for (@all_conf) {
 
     my $conf = new Apache::Admin::Config($_);
-    print "Conf file: $_\n";
+    print "\nConf file: $_\n";
 
     foreach($conf->section('VirtualHost')) {
         printf "%15s: %s\n",$_->name,$_->directive('ServerName')->value if defined $_->directive('ServerName');
