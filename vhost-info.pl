@@ -5,6 +5,7 @@ use strict;
 use Apache::Admin::Config;
 use App::Info::HTTPD::Apache;
 use File::Spec;
+use File::Find;
 use Sys::Hostname;
 
 # Check for the current httpd.conf file in use
@@ -14,6 +15,7 @@ my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 # Grab the global document root/ default for the server
 # and start off the DocumentRoots hash with it.
 (my $ServerRoot = $main_conf->directive('DocumentRoot')) =~ s/\"//g;
+
 my %DocumentRoots = ($ServerRoot => 1);
 
 # We're going to be examining all of the included .conf files
@@ -29,31 +31,52 @@ printf "%15s %s\n%15s %s\n%15s %s\n%15s %s\n\n",
 
 for (@all_conf) {
 
-	my $conf = new Apache::Admin::Config($_);
+    my $conf = new Apache::Admin::Config($_);
+    print "Conf file: $_\n";
 
-	print "Conf file: $_\n";
+    foreach($conf->section('VirtualHost')) {
+        printf "%15s: %s\n",$_->name,$_->directive('ServerName')->value if defined $_->directive('ServerName');
 
-	foreach($conf->section('VirtualHost'))
-	{
-		printf "%15s: %s\n",$_->name,$_->directive('ServerName')->value if defined $_->directive('ServerName');
-		foreach($_->directive('ServerAlias')) {
-			printf "%15s: %s\n","Alias",$_->value;
-		}
-		my $DR = $_->directive('DocumentRoot') ? $_->directive('DocumentRoot') : 'None';
-		printf "%15s: %s\n", "DocumentRoot", $DR;
-		if ($DR eq 'None') {
-			foreach my $direc ($_->directive()){
-				printf "%15s: %s\n",$direc->name,$direc->value
-				unless ($direc->name eq 'ServerName' || $direc->name eq 'ServerAlias');
-			}
-		}
-		print "\n";
-		$DocumentRoots{File::Spec->canonpath($DR)}++;
-	}
+        foreach($_->directive('ServerAlias')) {
+            printf "%15s: %s\n","Alias",$_->value;
+        }
+
+        my $DR = $_->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
+
+        printf "%15s: %s\n", "DocumentRoot", $DR;
+
+        $DocumentRoots{$DR}++;
+
+        if ($DR eq 'None') {
+            foreach my $direc ($_->directive()){
+                printf "%15s: %s\n",$direc->name,$direc->value
+                  unless ($direc->name eq 'ServerName' || $direc->name eq 'ServerAlias');
+            }
+        } else {
+            if ($DocumentRoots{$DR} == 1) {
+
+                my $size_sum = 0; my $u = "KB";
+                
+                find sub { -f and ($size_sum += -s) }, $DR;
+                $size_sum = $size_sum / 1024;
+
+                if ($size_sum > 1024) {
+                    $size_sum = $size_sum / 1024; $u = "MB";
+                }
+                if ($size_sum > 1024) {
+                    $size_sum = $size_sum / 1024; $u = "GB";
+                }
+
+                printf "%15s: %.02f %s\n", "Dir Size", $size_sum, $u ;
+            }
+        }
+        print "\n";
+    }
 }
+
 print "\nDocument Roots to be aware of:\n\n";
 foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
 {
-	#printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
-	print "$_\n" unless $_ eq "None";
+    #printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
+    print "$_\n" unless $_ eq "None";
 }
