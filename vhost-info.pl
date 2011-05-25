@@ -58,6 +58,7 @@ for (@all_conf) {
             if ($DocumentRoots{$DR} == 1) {
                 my $du_size = du ( { 'Human-readable' => 1 } , $DR ); # Divides by 1000. Use lowercase to divide by 1024.
                 printf "%15s: %s\n", "Dir Size", $du_size ;
+                system("cd $DR && drush status"); # Checks for drupal install
             }
         } else {
             printf "%15s: %s\n", "***Warning***", "DocumentRoot does not exist!";
