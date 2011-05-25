@@ -5,7 +5,7 @@ use strict;
 use Apache::Admin::Config;
 use App::Info::HTTPD::Apache;
 use File::Spec;
-use File::Find;
+use Filesys::DiskUsage qw/du/;
 use Sys::Hostname;
 
 # Check for the current httpd.conf file in use
@@ -54,20 +54,8 @@ for (@all_conf) {
             }
         } else {
             if ($DocumentRoots{$DR} == 1) {
-
-                my $size_sum = 0; my $u = "KB";
-                
-                find sub { -f and ($size_sum += -s) }, $DR;
-                $size_sum = $size_sum / 1024;
-
-                if ($size_sum > 1024) {
-                    $size_sum = $size_sum / 1024; $u = "MB";
-                }
-                if ($size_sum > 1024) {
-                    $size_sum = $size_sum / 1024; $u = "GB";
-                }
-
-                printf "%15s: %.02f %s\n", "Dir Size", $size_sum, $u ;
+                my $du_size = du ( { 'Human-readable' => 1 } , $DR ); # Divides by 1000. Use lowercase to divide by 1024.
+                printf "%15s: %s\n", "Dir Size", $du_size ;
             }
         }
         print "\n";
