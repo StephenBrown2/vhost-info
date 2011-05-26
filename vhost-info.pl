@@ -90,7 +90,7 @@ sub HELP_MESSAGE() {
   print "Usage: ".basename($0)." [OPTIONS]\n";
   print "  The following options are accepted:\n\n";
   print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
-  print "\t-d\tDisplay the status of a Drupal by running \"drush status\" in each DocumentRoot\n\n";
+  print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
   print "\t-a\tPerform all of the above. Overrides any other option specified\n\n";
   print "Options may be merged together. (Though at this point it'd be kind of pointless. :-p )\n\n";
 }
