@@ -41,7 +41,7 @@ for (@all_conf) {
     my $conf = new Apache::Admin::Config($_);
     print "\nConf file: $_\n";
 
-    print " " x 11, "No VirtualHost entries in this file.\n\n" unless $conf->section('VirtualHost');
+    print "*No VirtualHost entries in this file*\n\n" unless $conf->section('VirtualHost');
 
     foreach($conf->section('VirtualHost')) {
         printf "%15s: %s\n",$_->name,$_->directive('ServerName')->value if defined $_->directive('ServerName');
