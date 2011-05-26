@@ -4,9 +4,16 @@ use strict;
 
 use Apache::Admin::Config;
 use App::Info::HTTPD::Apache;
+use Getopt::Std;
+use File::Basename;
 use File::Spec;
 use Filesys::DiskUsage qw/du/;
 use Sys::Hostname;
+
+$main::VERSION = "0.1";
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
+our($opt_d, $opt_s, $opt_a);
+getopts('dsa');
 
 # Check for the current httpd.conf file in use
 my $apache = App::Info::HTTPD::Apache->new;
@@ -19,7 +26,7 @@ my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 my %DocumentRoots = ($ServerRoot => 1);
 
 # We're going to be examining all of the included .conf files
-my @all_conf = ($apache->conf_file, $main_conf->directive('Include'));
+my @all_conf = ($apache->conf_file, glob($main_conf->directive('Include')));
 map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @all_conf;
 
 # Print some summary information.
@@ -57,8 +64,8 @@ for (@all_conf) {
         } elsif ( -d $DR ) {
             if ($DocumentRoots{$DR} == 1) {
                 my $du_size = du ( { 'Human-readable' => 1 } , $DR ); # Divides by 1000. Use lowercase to divide by 1024.
-                printf "%15s: %s\n", "Dir Size", $du_size ;
-                system("cd $DR && drush status"); # Checks for drupal install
+                printf("%15s: %s\n", "Dir Size", $du_size) if $opt_s or $opt_a;
+                system("cd $DR && drush status") if $opt_d or $opt_a; # Checks for drupal install
             }
         } else {
             printf "%15s: %s\n", "***Warning***", "DocumentRoot does not exist!";
@@ -74,4 +81,16 @@ foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %Doc
 {
     #printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
     printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
+}
+
+sub HELP_MESSAGE() {
+  print "Usage: ".basename($0)." [OPTIONS]\n";
+  print "  The following options are accepted:\n\n";
+  print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
+  print "\t-d\tDisplay the status of a Drupal by running \"drush status\" in each DocumentRoot\n\n";
+  print "\t-a\tPerform all of the above. Overrides any other option specified\n\n";
+  print "Options may be merged together. (Though at this point it'd be kind of pointless. :-p )\n\n";
+}
+sub VERSION_MESSAGE() {
+  print basename($0)." - version $main::VERSION\n";
 }
