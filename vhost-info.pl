@@ -15,6 +15,15 @@ $Getopt::Std::STANDARD_HELP_VERSION = 1;
 our($opt_d, $opt_s, $opt_a);
 getopts('dsa');
 
+# If the option to check drupal installs using drush is used, make sure we have drush installed first!
+if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
+    print "Sorry, it doesn't appear that you have drush installed in a place I can access it.\n";
+    print "Maybe you do, but it isn't aliased or included in your PATH?\n";
+    print "At any rate, you'll need to fix that before you can use the -d option.\n";
+    print "Bye!\n";
+    exit;
+}
+
 # Check for the current httpd.conf file in use
 my $apache = App::Info::HTTPD::Apache->new;
 my $main_conf = new Apache::Admin::Config( $apache->conf_file );
