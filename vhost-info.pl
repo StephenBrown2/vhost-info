@@ -63,8 +63,7 @@ for (@all_conf) {
             }
         } elsif ( -d $DR ) {
             if ($DocumentRoots{$DR} == 1) {
-                my $du_size = du ( { 'Human-readable' => 1 } , $DR ); # Divides by 1000. Use lowercase to divide by 1024.
-                printf("%15s: %s\n", "Dir Size", $du_size) if $opt_s or $opt_a;
+                printf("%15s: %s\n", "Dir Size", du {'Human-readable' => 1}, $DR ) if $opt_s or $opt_a;
                 system("cd $DR && drush status") if $opt_d or $opt_a; # Checks for drupal install
             }
         } else {
