@@ -80,7 +80,11 @@ for (@all_conf) {
         } elsif ( -d $DR ) {
             if ($DocumentRoots{$DR} == 1) {
                 printf("%15s: %s\n", "Dir Size", du {'Human-readable' => 1}, $DR ) if $opt_s;
-                system("cd $DR && drush status") if $opt_d; # Checks for drupal install
+                if ($opt_d) {
+                    (qx/cd $DR && drush status/ =~ /Drupal/) # Checks for drupal install
+                    ? system("cd $DR && drush status") # If Drupal, give me the deets.
+                    : printf "%15s: %s\n", "Drupal", "No"; # Otherwise, let me know.
+                }
             }
         } else {
             printf "%15s: %s\n", "***Warning***", "DocumentRoot does not exist!";
