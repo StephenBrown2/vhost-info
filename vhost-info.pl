@@ -50,7 +50,11 @@ for (@all_conf) {
             printf "%15s: %s\n","Alias",$_->value;
         }
 
-        my $DR = $_->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
+        my $DR = $_->directive('DocumentRoot')
+                ? -d $_->directive('DocumentRoot')."/sites/".$_->directive('ServerName')
+                ? File::Spec->canonpath($_->directive('DocumentRoot')."/sites/".$_->directive('ServerName'))
+                : File::Spec->canonpath($_->directive('DocumentRoot'))
+                : 'None';
 
         printf "%15s: %s\n", "DocumentRoot", $DR;
 
