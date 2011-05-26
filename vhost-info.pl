@@ -26,7 +26,7 @@ my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 my %DocumentRoots = ($ServerRoot => 1);
 
 # We're going to be examining all of the included .conf files
-my @all_conf = ($apache->conf_file, glob($main_conf->directive('Include')));
+my @all_conf = ($apache->conf_file, map {glob($_)} $main_conf->directive('Include'));
 map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @all_conf;
 
 # Print some summary information.
