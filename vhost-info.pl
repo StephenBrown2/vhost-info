@@ -15,6 +15,8 @@ $Getopt::Std::STANDARD_HELP_VERSION = 1;
 our($opt_d, $opt_s, $opt_a);
 getopts('dsa');
 
+($opt_d, $opt_s) = (1) x 2 if $opt_a; # Set all variables, if the -a option is set
+
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
     print "Sorry, it doesn't appear that you have drush installed in a place I can access it.\n";
@@ -76,8 +78,8 @@ for (@all_conf) {
             }
         } elsif ( -d $DR ) {
             if ($DocumentRoots{$DR} == 1) {
-                printf("%15s: %s\n", "Dir Size", du {'Human-readable' => 1}, $DR ) if $opt_s or $opt_a;
-                system("cd $DR && drush status") if $opt_d or $opt_a; # Checks for drupal install
+                printf("%15s: %s\n", "Dir Size", du {'Human-readable' => 1}, $DR ) if $opt_s;
+                system("cd $DR && drush status") if $opt_d; # Checks for drupal install
             }
         } else {
             printf "%15s: %s\n", "***Warning***", "DocumentRoot does not exist!";
