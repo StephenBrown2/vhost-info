@@ -61,11 +61,12 @@ for (@all_conf) {
             printf "%15s: %s\n","Alias",$_->value;
         }
 
-        my $DR = $_->directive('DocumentRoot')
-                ? -d $_->directive('DocumentRoot')."/sites/".$_->directive('ServerName')
-                ? File::Spec->canonpath($_->directive('DocumentRoot')."/sites/".$_->directive('ServerName'))
-                : File::Spec->canonpath($_->directive('DocumentRoot'))
-                : 'None';
+        # Check to see if there is a DocumentRoot defined in the VirtualHost
+        my $DR = $_->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
+        # Check if the site url (ServerName) we are looking at is actually a multi-site Drupal install
+            $DR = (defined $_->directive('ServerName') && -d $DR."/sites/".$_->directive('ServerName'))
+                ? File::Spec->canonpath($DR."/sites/".$_->directive('ServerName'))
+                : File::Spec->canonpath($DR);
 
         printf "%15s: %s\n", "DocumentRoot", $DR;
 
