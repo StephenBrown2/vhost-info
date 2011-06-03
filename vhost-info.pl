@@ -113,3 +113,47 @@ sub HELP_MESSAGE() {
 sub VERSION_MESSAGE() {
   print basename($0)." - version $main::VERSION\n";
 }
+
+sub drush_status {
+
+  chdir(shift);
+
+  my @oa = split /\s+:|\n/, `drush status`; # Split on colons (except in urls) and newlines
+
+  for (@oa) {
+    chomp;
+    s/^\s*|\s*$|\s{2,}//g;   # Trim extra spaces
+    $_ = 'none' if $_ eq ''; # If there isn't a value, put one there so the hash will work
+  }
+
+  my %oh = @oa;
+
+  for my $k ( keys %oh ) { # Normalize the key values
+      (my $nk = lc $k) =~ s/ /_/g;
+      $oh{$nk} = delete $oh{$k};
+  }
+
+############################################################
+# Available Keys for a full, proper Drupal install
+#  administration_theme (String)
+#  database             (String)
+#  database_driver      (String)
+#  database_hostname    (String)
+#  database_name        (String)
+#  database_username    (String)
+#  default_theme        (String)
+#  drupal_bootstrap     (String)
+#  drupal_root          (Absolute file path)
+#  drupal_user          (String)
+#  drupal_version       (Float)
+#  drush_alias_files    (Absolute file path)
+#  drush_configuration  (Absolute file path)
+#  drush_version        (Float)
+#  file_directory_path  (Relative file path [to drupal_root])
+#  php_configuration    (Absolute file path)
+#  site_path            (Relative file path [to drupal_root])
+#  site_uri             (URI [http://...])
+############################################################
+
+  return %oh;
+}
