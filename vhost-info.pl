@@ -85,7 +85,7 @@ for (@all_conf) {
                     my %drush = &drush_status($DR);
                     if (exists $drush{'drupal_version'}) { # If Drupal is installed, tell me about it
                         printf "%15s: %s\n", "Drupal Version", $drush{'drupal_version'};
-                        printf "%15s: %s\n", "Database", $drush{'database_name'};
+                        printf "%15s: %s\n", "Database Name", $drush{'database_name'};
                         if ($drush{'database_hostname'} ne 'localhost') {
                             printf "%15s: %s\n", "Database Host", $drush{'database_hostname'};
                             printf "%15s: %s\n", "Database User", $drush{'database_username'}
