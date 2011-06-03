@@ -13,10 +13,10 @@ use Sys::Hostname;
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_d, $opt_s, $opt_a);
-getopts('dsa');
+our($opt_b, $opt_d, $opt_s, $opt_a);
+getopts('bdsa');
 
-($opt_d, $opt_s) = (1) x 2 if $opt_a; # Set all variables, if the -a option is set
+($opt_b, $opt_d, $opt_s) = (1) x 3 if $opt_a; # Set all variables, if the -a option is set
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
@@ -91,10 +91,14 @@ for (@all_conf) {
                             printf "%15s: %s\n", "Database User", $drush{'database_username'}
                                 if $drush{'database_username'} ne 'root';
                         }
-                        printf "%15s: %s\n", "Database Status",  $drush{'database'} ? $drush{'database'} : "Error!";
+                        printf "%15s: %s\n", "Database Status", exists $drush{'database'} ? $drush{'database'} : "Error!";
+                        printf "%15s: %s\n", "Database Size", drupal_db_size($DR) if ( $opt_b && exists $drush{'database'} );
                     } else { # Otherwise, just say so.
                         printf "%15s: %s\n", "Drupal", "No";
                     }
+                } elsif ($opt_b) {
+                    my %drush = &drush_status($DR);
+                    printf "%15s: %s\n", "Drupal DB Size", drupal_db_size($DR) if exists $drush{'database'};
                 }
             } else {
                 printf "%15s: %s", "Note", "DocumentRoot already seen. Check above for more information.\n"
@@ -121,8 +125,9 @@ sub HELP_MESSAGE() {
   print "  The following options are accepted:\n\n";
   print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
   print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
+  print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
   print "\t-a\tPerform all of the above. Overrides any other option specified\n\n";
-  print "Options may be merged together. (Though at this point it'd be kind of pointless. :-p )\n\n";
+  print "Note: Options may be merged together.\n\n";
 }
 sub VERSION_MESSAGE() {
   print basename($0)." - version $main::VERSION\n";
@@ -170,4 +175,56 @@ sub drush_status {
 ############################################################
 
   return %oh;
-}
+} # END SUB drush_status
+
+sub human_size {
+# Takes a number in bytes and converts it to Kilo, Mega, or Gigabytes.
+  my $num = shift;
+  my $i = 0;
+  while ($num >= 1024){
+    $num = $num/1024; $i++;
+  }
+  my $unit = $i==0 ? "B" : $i==1 ? "KB" : $i==2 ? "MB" : $i==3 ? "GB" : "(TooBig)";
+  my $returnstring = sprintf "%.2f %s", $num, $unit;
+} # END SUB human_size
+
+sub drupal_db_size {
+  require DBI;
+  require DBD::mysql;
+  require File::Spec;
+  require URI::Escape;
+
+  my $site_path = shift;
+  my %drush_info = drush_status($site_path);
+  return undef unless exists $drush_info{'database'};
+
+  $site_path .= "/$drush_info{'site_path'}" if ($site_path !~ m#/sites/#);
+  
+  my $settings_file = File::Spec->canonpath("$site_path/settings.php");
+  my $dbString = '';
+
+  if (-r $settings_file) {
+    open SETTINGS, '<', $settings_file;
+    while (<SETTINGS>){ $dbString = $_ and last if m/^\$db_url.*/; }
+    close SETTINGS;
+  } else { return "Error reading $settings_file";}
+
+  chomp $dbString; # No need for spurious newlines gumming up the works.
+  $dbString =~ s/^\$db_url.*\'(.*)\'.*/$1/; # Just take the quoted part
+  $dbString =~ tr#[:/@]#,#; # Substitute commas for other punctuation
+  $dbString =~ s/,,+/,/; # Whoops, too many commas! Now we can split it.
+
+  my ($protocol,$user,$pass,$host,$db) = split /,/, $dbString;
+  $pass = URI::Escape::uri_unescape($pass); # Need to be able to read the password
+
+  my $dbh = DBI->connect("dbi:mysql:database=$db;host=$host", $user, $pass);
+  my $sth = $dbh->prepare("SELECT (SUM(t.data_length)+SUM(t.index_length)) total_size
+                         FROM INFORMATION_SCHEMA.SCHEMATA s
+                         LEFT JOIN INFORMATION_SCHEMA.TABLES t
+                         ON s.schema_name = t.table_schema
+                         WHERE s.schema_name = '$db'") if defined $dbh;
+  $sth->execute() if defined $dbh;
+  my $db_size = defined $dbh ? $sth->fetchrow_hashref->{total_size} : "-1";
+  my $db_size_h = &human_size($db_size);
+#  return $db_size_h;
+} # END SUB drupal_db_size
