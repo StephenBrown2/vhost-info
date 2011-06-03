@@ -50,7 +50,7 @@ printf "%15s %s\n%15s %s\n%15s %s\n%15s %s\n\n",
 for (@all_conf) {
 
     my $conf = new Apache::Admin::Config($_);
-    print "\nConf file: $_\n";
+    print '-' x 80, "\n\nConf file: $_\n";
 
     print "*No VirtualHost entries in this file*\n\n" unless $conf->section('VirtualHost');
 
@@ -95,7 +95,7 @@ for (@all_conf) {
     }
 }
 
-print "\nDocument Roots to be aware of:\n\n";
+print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
 foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
 {
     #printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
