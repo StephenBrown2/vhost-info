@@ -10,7 +10,8 @@ use File::Spec;
 use Filesys::DiskUsage qw/du/;
 use Sys::Hostname;
 
-$main::VERSION = "0.1";
+# getopt parameters and settings
+$main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 our($opt_d, $opt_s, $opt_a);
 getopts('dsa');
