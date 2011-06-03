@@ -81,10 +81,23 @@ for (@all_conf) {
             if ($DocumentRoots{$DR} == 1) {
                 printf("%15s: %s\n", "Dir Size", du {'Human-readable' => 1}, $DR ) if $opt_s;
                 if ($opt_d) {
-                    (qx/cd $DR && drush status/ =~ /Drupal/) # Checks for drupal install
-                    ? system("cd $DR && drush status") # If Drupal, give me the deets.
-                    : printf "%15s: %s\n", "Drupal", "No"; # Otherwise, let me know.
+                    my %drush = &drush_status($DR);
+                    if (exists $drush{'drupal_version'}) { # If Drupal is installed, tell me about it
+                        printf "%15s: %s\n", "Drupal Version", $drush{'drupal_version'};
+                        printf "%15s: %s\n", "Database", $drush{'database_name'};
+                        if ($drush{'database_hostname'} ne 'localhost') {
+                            printf "%15s: %s\n", "Database Host", $drush{'database_hostname'};
+                            printf "%15s: %s\n", "Database User", $drush{'database_username'}
+                                if $drush{'database_username'} ne 'root';
+                        }
+                        printf "%15s: %s\n", "Database Status",  $drush{'database'} ? $drush{'database'} : "Error!";
+                    } else { # Otherwise, just say so.
+                        printf "%15s: %s\n", "Drupal", "No";
+                    }
                 }
+            } else {
+                printf "%15s: %s", "Note", "DocumentRoot already seen. Check above for more information.\n"
+                    if ($opt_s || $opt_d); # Only note this if you asked for more information
             }
         } else {
             printf "%15s: %s\n", "***Warning***", "DocumentRoot does not exist!";
