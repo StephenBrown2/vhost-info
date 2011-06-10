@@ -184,8 +184,8 @@ sub human_size {
   while ($num >= 1024){
     $num = $num/1024; $i++;
   }
-  my $unit = $i==0 ? "B" : $i==1 ? "KB" : $i==2 ? "MB" : $i==3 ? "GB" : "(TooBig)";
-  my $returnstring = sprintf "%.2f %s", $num, $unit;
+  my $unit = $i==0 ? "B" : $i==1 ? "K" : $i==2 ? "M" : $i==3 ? "G" : " (TooBig)";
+  my $returnstring = sprintf "%.2f%s", $num, $unit;
 } # END SUB human_size
 
 sub drupal_db_size {
