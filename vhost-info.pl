@@ -10,6 +10,7 @@ use File::Spec;
 use Filesys::DiskUsage qw/du/;
 use Sys::Hostname;
 use LWP::Simple;
+use Net::DNS;
 
 # getopt parameters and settings
 $main::VERSION = "0.2";
@@ -60,10 +61,23 @@ for (@all_conf) {
     print "*No VirtualHost entries in this file*\n\n" unless $conf->section('VirtualHost');
 
     foreach($conf->section('VirtualHost')) {
-        printf "%15s: %s\n",$_->name,$_->directive('ServerName')->value if defined $_->directive('ServerName');
+        if ( defined $_->directive('ServerName') ) {
+            my $ServerName = $_->directive('ServerName')->value;
+            (my $name = $ServerName) =~ s/:.*//;
+            my %ipaddrs = &IPlookupHash($name);
+            delete $ipaddrs{$myip} if exists $ipaddrs{$myip};
+            my $addrs = scalar keys %ipaddrs ? " (" . join(', ', keys %ipaddrs) . ")" : "";
+
+            printf "%15s: %s%s\n",$_->name,$ServerName,$addrs;
+        }
 
         foreach($_->directive('ServerAlias')) {
-            printf "%15s: %s\n","Alias",$_->value;
+            (my $name = $_->value) =~ s/:.*//;
+            my %ipaddrs = &IPlookupHash($name);
+            delete $ipaddrs{$myip} if exists $ipaddrs{$myip};
+            my $addrs = scalar keys %ipaddrs ? " (" . join(', ', keys %ipaddrs) . ")" : "";
+
+            printf "%15s: %s%s\n","Alias",$_->value,$addrs;
         }
 
         # Check to see if there is a DocumentRoot defined in the VirtualHost
@@ -232,3 +246,21 @@ sub drupal_db_size {
   my $db_size_h = &human_size($db_size);
 #  return $db_size_h;
 } # END SUB drupal_db_size
+
+sub IPlookup {
+  my $dns= new Net::DNS::Resolver;
+  my @ipaddrs;
+  my $search = $dns->search(shift);
+  my @answer = $search ? $search->answer : undef;
+  push @ipaddrs, defined $_ ? $_->type eq "A" ? $_->address : next : "Unresolvable!" for @answer;
+  return @ipaddrs;
+}
+
+sub IPlookupHash {
+  my $dns= new Net::DNS::Resolver;
+  my %ipaddrs;
+  my $search = $dns->search(shift);
+  my @answer = $search ? $search->answer : undef;
+  $ipaddrs{defined $_ ? $_->type eq "A" ? $_->address : next : "Unresolvable!"}++ for @answer;
+  return %ipaddrs;
+}
