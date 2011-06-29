@@ -33,6 +33,8 @@ if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
 my $myip = get("http://automation.whatismyip.com/n09230945.asp");
 
 # Check for the current httpd.conf file in use
+# Note: This only finds the first httpd in the path.
+# So make sure the httpd you're using is found by which!
 my $apache = App::Info::HTTPD::Apache->new;
 my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 
