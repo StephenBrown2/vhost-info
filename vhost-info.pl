@@ -221,7 +221,7 @@ sub drupal_db_size {
     return undef unless exists $drush_info{'database'};
 
     $site_path .= "/$drush_info{'site_path'}" if ($site_path !~ m#/sites/#);
-  
+
     my $settings_file = File::Spec->canonpath("$site_path/settings.php");
     my $dbString = '';
 
