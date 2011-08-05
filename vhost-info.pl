@@ -15,8 +15,8 @@ use Net::DNS;
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_b, $opt_d, $opt_s, $opt_a);
-getopts('bdsa');
+our($opt_b, $opt_d, $opt_s, $opt_a, $opt_n);
+getopts('bdsan:');
 
 ($opt_b, $opt_d, $opt_s) = (1) x 3 if $opt_a; # Set all variables, if the -a option is set
 
