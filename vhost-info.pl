@@ -85,9 +85,16 @@ for (@all_conf) {
         # Check to see if there is a DocumentRoot defined in the VirtualHost
         my $DR = $_->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
         # Check if the site url (ServerName) we are looking at is actually a multi-site Drupal install
-            $DR = (defined $_->directive('ServerName') && -d $DR."/sites/".$_->directive('ServerName'))
-                ? File::Spec->canonpath($DR."/sites/".$_->directive('ServerName'))
-                : File::Spec->canonpath($DR);
+        if (defined $_->directive('ServerName')) {
+            (my $NameSansWWW = $_->directive('ServerName')) =~ s/www\.//;
+            if (-d $DR."/sites/".$_->directive('ServerName')) {
+                $DR = File::Spec->canonpath($DR."/sites/".$_->directive('ServerName'));
+            } elsif (-d $DR."/sites/".$NameSansWWW) {
+                $DR = File::Spec->canonpath($DR."/sites/".$NameSansWWW);
+            } else {
+                $DR = File::Spec->canonpath($DR);
+            }
+        }
 
         printf "%15s: %s\n", "DocumentRoot", $DR;
 
