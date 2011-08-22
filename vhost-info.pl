@@ -195,7 +195,7 @@ sub printInfoHash {
     my (%InfoHash) = @_;
     my $fstr = "%15s: %s\n";
     my $ipfstr = "%15s: %s (%s)\n";
-    for my $file ( sort keys %InfoHash ) {
+    for my $file ( keys %InfoHash ) {
         print '-' x 80;
         print "\nConf file: $file\n\n";
         for my $vhost ( sort keys %{$InfoHash{$file}}) {
