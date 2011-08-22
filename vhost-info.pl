@@ -108,6 +108,8 @@ for (@all_conf) {
             $conf_info{$conf_file}{$name}{'IP'} = &ip_lookup($name);
             $ServerName = $name;
             ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
+        } else {
+            next; #All VirtualHosts must have a ServerName.
         }
 
         foreach($_->directive('ServerAlias')) {
