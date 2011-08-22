@@ -95,6 +95,8 @@ for (@all_conf) {
 
     my $conf = new Apache::Admin::Config($_);
     my $conf_file = $_;
+    my $opt_n_vhost_match = 0;
+    my $opt_n_file_match = 0;
 
     foreach($conf->section('VirtualHost')) {
         my $ServerName;
@@ -104,11 +106,23 @@ for (@all_conf) {
             $conf_info{$conf_file}{$name}{'URL'} = $name;
             $conf_info{$conf_file}{$name}{'IP'} = &ip_lookup($name);
             $ServerName = $name;
+            ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
+            print "ServerName $name in $conf_file matches '$opt_n'\n" if (defined $opt_n && $name =~ /$opt_n/);
         }
 
         foreach($_->directive('ServerAlias')) {
             (my $name = $_->value) =~ s/:.*//;
             $conf_info{$conf_file}{$ServerName}{'Aliases'}{$name} = &ip_lookup($name);
+            ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
+            print "ServerAlias $name in $conf_file matches '$opt_n'\n" if (defined $opt_n && $name =~ /$opt_n/);
+        }
+
+        # Check for match in ServerName or ServerAlias, if -n defined.
+        # If no match, delete entry from hash and skip to next vhost.
+        # If there is a match, just reset the 'matched' value.
+        if (defined $opt_n) {
+            (delete $conf_info{$conf_file}{$ServerName} && next) if $opt_n_vhost_match == 0;
+            $opt_n_vhost_match = 0;
         }
 
         # Check to see if there is a DocumentRoot defined in the VirtualHost
