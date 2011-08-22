@@ -33,7 +33,8 @@ if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
 my $time_marker = time;
 my $myip = &ip_lookup_self;
 my $new_time_marker = (time - $time_marker);
-print STDERR "Finding our external IP address took $new_time_marker seconds.\n" if $new_time_marker;
+print STDERR "Finding our external IP address took $new_time_marker " .
+    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker;
 
 # Check for the current httpd.conf file in use
 # Note: This only finds the first httpd in the path.
@@ -178,7 +179,8 @@ for (@all_conf) {
 }
 
 $new_time_marker = (time - $time_marker);
-print STDERR "Gathering information took $new_time_marker seconds.\n" if $new_time_marker;
+print STDERR "Gathering information took $new_time_marker " .
+    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker;
 
 &printInfoHash(%conf_info);
 
