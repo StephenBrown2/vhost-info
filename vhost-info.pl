@@ -197,8 +197,9 @@ sub HELP_MESSAGE() {
     print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
     print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
     print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
-    print "\t-a\tPerform all of the above. Overrides any other option specified\n\n";
-    print "Note: Options may be merged together.\n\n";
+    print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
+    print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
+    print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
 }
 sub VERSION_MESSAGE() {
     print basename($0)." - version $main::VERSION\n";
