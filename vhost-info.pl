@@ -107,14 +107,12 @@ for (@all_conf) {
             $conf_info{$conf_file}{$name}{'IP'} = &ip_lookup($name);
             $ServerName = $name;
             ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
-            print "ServerName $name in $conf_file matches '$opt_n'\n" if (defined $opt_n && $name =~ /$opt_n/);
         }
 
         foreach($_->directive('ServerAlias')) {
             (my $name = $_->value) =~ s/:.*//;
             $conf_info{$conf_file}{$ServerName}{'Aliases'}{$name} = &ip_lookup($name);
             ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
-            print "ServerAlias $name in $conf_file matches '$opt_n'\n" if (defined $opt_n && $name =~ /$opt_n/);
         }
 
         # Check for match in ServerName or ServerAlias, if -n defined.
