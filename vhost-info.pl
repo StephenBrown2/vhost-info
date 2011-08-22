@@ -235,7 +235,7 @@ sub printInfoHash {
                 if ( defined $InfoHash{$file}{$vhost}{'DocumentRoot'}{'Size'} ) {
                     printf $fstr, "Dir Size", $InfoHash{$file}{$vhost}{'DocumentRoot'}{'Size'};
                 } #END DOCUMENT ROOT INFO
-                if ( defined $InfoHash{$file}{$vhost}{'Drupal'} ) {
+                if ( defined $InfoHash{$file}{$vhost}{'Drupal'} && $InfoHash{$file}{$vhost}{'Drupal'} ne 'No' ) {
                     if ( defined $InfoHash{$file}{$vhost}{'Drupal'}{'Version'}) {
                         printf $fstr, "Drupal Version", $InfoHash{$file}{$vhost}{'Drupal'}{'Version'};
                     }
