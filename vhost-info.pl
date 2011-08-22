@@ -30,7 +30,7 @@ if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
 }
 
 # Find out our global IP address
-my $myip = get("http://automation.whatismyip.com/n09230945.asp");
+my $myip = &ip_lookup_self;
 
 # Check for the current httpd.conf file in use
 # Note: This only finds the first httpd in the path.
@@ -98,13 +98,13 @@ for (@all_conf) {
             $ServerName = $_->directive('ServerName')->value;
             (my $name = $ServerName) =~ s/:.*//;
             $conf_info{$conf_file}{$name}{'URL'} = $name;
-            $conf_info{$conf_file}{$name}{'IP'} = &IPlookup($name);
+            $conf_info{$conf_file}{$name}{'IP'} = &ip_lookup($name);
             $ServerName = $name;
         }
 
         foreach($_->directive('ServerAlias')) {
             (my $name = $_->value) =~ s/:.*//;
-            $conf_info{$conf_file}{$ServerName}{'Aliases'}->{$name} = &IPlookup($name);
+            $conf_info{$conf_file}{$ServerName}{'Aliases'}{$name} = &ip_lookup($name);
         }
 
         # Check to see if there is a DocumentRoot defined in the VirtualHost
@@ -339,7 +339,24 @@ sub drupal_db_size {
     return $db_size_h;
 } # END SUB drupal_db_size
 
-sub IPlookup {
+sub ip_lookup_self {
+    use Switch qw(Perl5 Perl6); #Use native GIVEN/WHEN once upgraded to Perl 5.10+
+    my $ip;
+    until ( defined $ip) {
+        given (int(rand(6))) {
+            when 0 { $ip = get("http://icanhazip.com"); }
+            when 1 { $ip = get("http://showip.codebrainz.ca"); }
+            when 2 { $ip = get("http://www.showmyip.com/simple"); }
+            when 3 { $ip = get("http://cfaj.freeshell.org/ipaddr.cgi"); }
+            when 4 { $ip = get("https://secure.informaction.com/ipecho"); }
+            when 5 { $ip = get("http://automation.whatismyip.com/n09230945.asp"); }
+        }
+    }
+    chomp($ip);
+    return $ip;
+}
+
+sub ip_lookup {
     my $dns= new Net::DNS::Resolver;
     my $search = $dns->search(shift);
     my @answer = $search ? $search->answer : undef;
@@ -347,7 +364,7 @@ sub IPlookup {
     return defined $_ ? $_->type eq "A" ? $_->address : next : "Unresolvable!" for @answer;
 }
 
-sub IPlookupArray {
+sub ip_lookup_array {
     my $dns= new Net::DNS::Resolver;
     my @ipaddrs;
     my $search = $dns->search(shift);
@@ -358,7 +375,7 @@ sub IPlookupArray {
     return @ipaddrs;
 }
 
-sub IPlookupHash {
+sub ip_lookup_hash {
     my $dns= new Net::DNS::Resolver;
     my %ipaddrs;
     my $search = $dns->search(shift);
