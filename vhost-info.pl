@@ -30,7 +30,10 @@ if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
 }
 
 # Find out our global IP address
+my $time_marker = time;
 my $myip = &ip_lookup_self;
+my $new_time_marker = (time - $time_marker);
+print STDERR "Finding our external IP address took $new_time_marker seconds.\n" if $new_time_marker;
 
 # Check for the current httpd.conf file in use
 # Note: This only finds the first httpd in the path.
@@ -77,6 +80,7 @@ map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @al
 #
 my %conf_info = ();
 
+$time_marker = time;
 
 # Print some summary information.
 printf "%15s %s\n%15s %s\n%15s %s\n%15s %s (%s)\n\n",
@@ -157,11 +161,14 @@ for (@all_conf) {
                                     #   Comment out if you want to know how many sites depend on this folder
         }
     }
+    # If there are no matching virtualhosts in the file, we can delete its reference
+    delete $conf_info{$conf_file} if (defined $opt_n && $opt_n_file_match == 0);
 }
 
-&printInfoHash(%conf_info);
+$new_time_marker = (time - $time_marker);
+print STDERR "Gathering information took $new_time_marker seconds.\n" if $new_time_marker;
 
-print STDERR "Done!\n\n";
+&printInfoHash(%conf_info);
 
 print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
 foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
