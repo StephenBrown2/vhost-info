@@ -54,8 +54,8 @@ map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @al
 
 # This hash will contain all the data for each virtualhost, as a hash of hashes in the form:
 #   %thehash = (
-#       'ConfFile' => {
-#           'ServerName' => {
+#       ConfFile => {
+#           ServerName => {
 #               'URL' => value,
 #               'IP' => value,
 #               'Alias' => {
