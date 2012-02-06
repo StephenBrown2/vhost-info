@@ -263,7 +263,10 @@ sub drush_status
 {
     chdir(shift);
 
-    my @oa = split /\s+:|\n/, `drush status`; # Split on colons (except in urls) and newlines
+    my $show_pass = shift || '';
+    $show_pass = ($show_pass =~ /p/) ? '--show-passwords' : ''; # If specified, show the DB password(s)
+
+    my @oa = split /\s+:|\n/, `drush status $show_pass`; # Split on colons (except in urls) and newlines
 
     for (@oa) {
         chomp;
@@ -286,6 +289,7 @@ sub drush_status
 #  database_hostname    (String)
 #  database_name        (String)
 #  database_username    (String)
+#  database_password    (String)
 #  default_theme        (String)
 #  drupal_bootstrap     (String)
 #  drupal_root          (Absolute file path)
