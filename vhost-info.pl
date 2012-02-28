@@ -15,10 +15,10 @@ use Net::DNS;
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_b, $opt_d, $opt_s, $opt_a, $opt_n);
-getopts('bdsan:');
+our($opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
+getopts('sdbran:');
 
-($opt_b, $opt_d, $opt_s) = (1) x 3 if $opt_a; # Set all variables, if the -a option is set
+($opt_s, $opt_d, $opt_b, $opt_r) = (1) x 4 if $opt_a; # Set all variables, if the -a option is set
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
@@ -187,11 +187,13 @@ print STDERR "Gathering information took $new_time_marker " .
 # The Big Print function
 &printInfoHash(%conf_info);
 
-print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
-foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
-{
-    #printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
-    printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
+# Summary of document roots at the end
+if ($opt_r) {
+    print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
+    foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
+    {
+        printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
+    }
 }
 
 ### BEGIN SUBROUTINES ###
@@ -202,6 +204,7 @@ sub HELP_MESSAGE() {
     print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
     print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
     print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
+    print "\t-r\tPrint a list of the Document Roots at the end of the report\n\n";
     print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
     print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
     print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
