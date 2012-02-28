@@ -356,7 +356,7 @@ sub ip_lookup_self {
         given (int(rand(6))) {
             when 0 { $ip = get("http://icanhazip.com"); }
             when 1 { $ip = get("http://showip.codebrainz.ca"); }
-            when 2 { $ip = get("http://www.showmyip.com/simple"); }
+            when 2 { $ip = get("http://www.showmyip.com/simple/"); }
             when 3 { $ip = get("http://cfaj.freeshell.org/ipaddr.cgi"); }
             when 4 { $ip = get("https://secure.informaction.com/ipecho"); }
             when 5 { $ip = get("http://automation.whatismyip.com/n09230945.asp"); }
