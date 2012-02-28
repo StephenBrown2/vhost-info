@@ -327,31 +327,14 @@ sub drupal_db_size {
     require URI::Escape;
 
     my $site_path = shift;
-    my %drush_info = drush_status($site_path);
+    my %drush_info = drush_status($site_path,'p');
     return undef unless exists $drush_info{'database'};
 
-    $site_path .= "/$drush_info{'site_path'}" if ($site_path !~ m#/sites/#);
-
-    my $settings_file = File::Spec->canonpath("$site_path/settings.php");
-    my $dbString = '';
-
-    if (-r $settings_file) {
-        open SETTINGS, '<', $settings_file;
-        while (<SETTINGS>){
-            $dbString = $_ and last if m/^\$db_url.*/;
-        }
-        close SETTINGS;
-    } else {
-        return "Error reading $settings_file";
-    }
-
-    chomp $dbString; # No need for spurious newlines gumming up the works.
-    $dbString =~ s/^\$db_url.*\'(.*)\'.*/$1/; # Just take the quoted part
-    $dbString =~ tr#[:/@]#,#; # Substitute commas for other punctuation
-    $dbString =~ s/,,+/,/; # Whoops, too many commas! Now we can split it.
-
-    my ($protocol,$user,$pass,$host,$db) = split /,/, $dbString;
-    $pass = URI::Escape::uri_unescape($pass); # Need to be able to read the password
+    my $user = $drush_info{'database_username'};
+    my $pass = $drush_info{'database_password'};
+    my $host = $drush_info{'database_hostname'};
+    my $db   = $drush_info{'database_name'};
+#    $pass = URI::Escape::uri_unescape($pass); # Need to be able to read the password
 
     my $dbh = DBI->connect("dbi:mysql:database=$db;host=$host", $user, $pass);
     my $sth = $dbh->prepare("SELECT (SUM(t.data_length)+SUM(t.index_length)) total_size
