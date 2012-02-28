@@ -321,11 +321,6 @@ sub human_size
 } # END SUB human_size
 
 sub drupal_db_size {
-    require DBI;
-    require DBD::mysql;
-    require File::Spec;
-    require URI::Escape;
-
     my $site_path = shift;
     my %drush_info = drush_status($site_path,'p');
     return undef unless exists $drush_info{'database'};
