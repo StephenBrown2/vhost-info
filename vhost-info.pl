@@ -336,16 +336,15 @@ sub drupal_db_size {
     my $db   = $drush_info{'database_name'};
 #    $pass = URI::Escape::uri_unescape($pass); # Need to be able to read the password
 
-    my $dbh = DBI->connect("dbi:mysql:database=$db;host=$host", $user, $pass);
-    my $sth = $dbh->prepare("SELECT (SUM(t.data_length)+SUM(t.index_length)) total_size
-                            FROM INFORMATION_SCHEMA.SCHEMATA s
-                            LEFT JOIN INFORMATION_SCHEMA.TABLES t
-                            ON s.schema_name = t.table_schema
-                            WHERE s.schema_name = '$db'") if defined $dbh;
-    $sth->execute() if defined $dbh;
-    
-    my $db_size = defined $dbh ? $sth->fetchrow_hashref->{total_size} : "-1";
-    my $db_size_h = &human_size($db_size);
+    chdir($site_path);
+    my $query = "SELECT (SUM(t.data_length)+SUM(t.index_length)) total_size ".
+                "FROM INFORMATION_SCHEMA.SCHEMATA s ".
+                "LEFT JOIN INFORMATION_SCHEMA.TABLES t ".
+                "ON s.schema_name = t.table_schema WHERE s.schema_name = '$db'";
+    my $drush_db_size = `drush sql-query "$query"`;
+    $drush_db_size =~ s/[^0-9]+//;
+    chomp($drush_db_size);
+    my $db_size_h = &human_size($drush_db_size);
 
     return $db_size_h;
 } # END SUB drupal_db_size
