@@ -184,6 +184,7 @@ $new_time_marker = (time - $time_marker);
 print STDERR "Gathering information took $new_time_marker " .
     (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker;
 
+# The Big Print function
 &printInfoHash(%conf_info);
 
 print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
@@ -192,6 +193,8 @@ foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %Doc
     #printf "%2d site%s using %s\n", $DocumentRoots{$_}, ($DocumentRoots{$_} == 1) ? ' ' : 's', $_;
     printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
 }
+
+### BEGIN SUBROUTINES ###
 
 sub HELP_MESSAGE() {
     print "Usage: ".basename($0)." [OPTIONS]\n";
@@ -202,11 +205,11 @@ sub HELP_MESSAGE() {
     print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
     print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
     print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
-}
+} # END SUB HELP_MESSAGE
+
 sub VERSION_MESSAGE() {
     print basename($0)." - version $main::VERSION\n";
-}
-
+} # END SUB VERSION_MESSAGE
 
 sub printInfoHash {
     my (%InfoHash) = @_;
@@ -256,8 +259,7 @@ sub printInfoHash {
         } #END VHOST LOOP
     } #END FILE LOOP
     print "\n";
-} #END HASH LOOP
-
+} #END SUB printInfoHash
 
 sub drush_status
 {
@@ -311,7 +313,7 @@ sub human_size
 { # Takes a number in bytes and converts it to Kilo, Mega, or Gigabytes.
     my $num = shift;
     my $i = 0;
-    
+
     while ($num >= 1024){
         $num = $num/1024; $i++;
     }
@@ -359,7 +361,7 @@ sub ip_lookup_self {
     }
     chomp($ip);
     return $ip;
-}
+} # END SUB ip_lookup_self
 
 sub ip_lookup {
     my $dns= new Net::DNS::Resolver;
@@ -367,26 +369,26 @@ sub ip_lookup {
     my @answer = $search ? $search->answer : undef;
 
     return defined $_ ? $_->type eq "A" ? $_->address : next : "Unresolvable!" for @answer;
-}
+} # END SUB ip_lookup
 
 sub ip_lookup_array {
     my $dns= new Net::DNS::Resolver;
     my @ipaddrs;
     my $search = $dns->search(shift);
     my @answer = $search ? $search->answer : undef;
-    
+
     push @ipaddrs, defined $_ ? $_->type eq "A" ? $_->address : next : "Unresolvable!" for @answer;
-    
+
     return @ipaddrs;
-}
+} # END SUB ip_lookup_array
 
 sub ip_lookup_hash {
     my $dns= new Net::DNS::Resolver;
     my %ipaddrs;
     my $search = $dns->search(shift);
     my @answer = $search ? $search->answer : undef;
-    
+
     $ipaddrs{defined $_ ? $_->type eq "A" ? $_->address : next : "Unresolvable!"}++ for @answer;
-  
+
     return %ipaddrs;
-}
+} # END SUB ip_lookup_hash
