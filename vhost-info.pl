@@ -15,10 +15,10 @@ use Net::DNS;
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
-getopts('sdbran:');
+our($opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
+getopts('lsdbran:');
 
-($opt_s, $opt_d, $opt_b, $opt_r) = (1) x 4 if $opt_a; # Set all variables, if the -a option is set
+($opt_l, $opt_s, $opt_d, $opt_b, $opt_r) = (1) x 5 if $opt_a; # Set all variables, if the -a option is set
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
@@ -61,7 +61,14 @@ map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @al
 #               'Alias' => {
 #                           'alias' => 'IPaddress',
 #                           'alias' => 'IPaddress' },
-#               'DocumentRoot' => value,
+#               'Logs' => {
+#                           '<Type>' => {
+#                                       'Path' => value,
+#                                       'Exists' => value },
+#                         },
+#               'DocumentRoot' => {
+#                                   'Location' => value,
+#                                   'Exists' => value },
 #               'Directives' => {
 #                           'directive' => value,
 #                           'directive' => value},
@@ -175,6 +182,18 @@ for (@all_conf) {
             $DocumentRoots{$DR}--;  # Decrement to put the entry at the bottom of the list when printing.
                                     #   Comment out if you want to know how many sites depend on this folder
         }
+
+        # Check for log files that do not exist
+        if ($opt_l) {
+            my @log_types = qw(Error Custom Forensic Rewrite Script Transfer);
+            foreach my $type (@log_types) {
+                $type .= 'Log';
+                if (defined $_->directive($type)) {
+                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $_->directive($type);
+                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $_->directive($type)) ? 'Yes' : 'No';
+                }
+            }
+        }
     }
     # If there are no matching virtualhosts in the file, we can delete its reference
     delete $conf_info{$conf_file} if (defined $opt_n && $opt_n_file_match == 0);
@@ -201,6 +220,7 @@ if ($opt_r) {
 sub HELP_MESSAGE() {
     print "Usage: ".basename($0)." [OPTIONS]\n";
     print "  The following options are accepted:\n\n";
+    print "\t-l\tCheck if any log files mentioned in conf file are missing\n\n";
     print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
     print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
     print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
@@ -228,6 +248,16 @@ sub printInfoHash {
                     printf $ipfstr, "Alias", $alias, $InfoHash{$file}{$vhost}{'Aliases'}{$alias};
                 } #END ALIASES LOOP
             } #END CHECK FOR ALIASES
+            if (defined $InfoHash{$file}{$vhost}{'Logs'}) {
+                for my $log (keys %{$InfoHash{$file}{$vhost}{'Logs'}}) {
+                    if ( $InfoHash{$file}{$vhost}{'Logs'}{$log}{'Exists'} eq 'No') {
+                        printf $ipfstr, $log, $InfoHash{$file}{$vhost}{'Logs'}{$log}{'Path'}, "Does not exist!";
+                        printf $fstr, "WARNING", "This will prevent Apache from restarting.";
+                    } else {
+                    printf $fstr, $log, $InfoHash{$file}{$vhost}{'Logs'}{$log}{'Path'};
+                    }
+                }
+            }
             if ($InfoHash{$file}{$vhost}{'DocumentRoot'}{'Location'} eq 'None') {
                 printf $fstr, "DocumentRoot", $InfoHash{$file}{$vhost}{'DocumentRoot'}{'Location'};
                 for my $directive ( keys %{$InfoHash{$file}{$vhost}{'Directives'}}) {
