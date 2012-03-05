@@ -42,11 +42,14 @@ print STDERR "Finding our external IP address took $new_time_marker " .
 my $apache = App::Info::HTTPD::Apache->new;
 my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 
+# Grab the global ServerRoot
+(my $ServerRoot = $main_conf->directive('ServerRoot')) =~ s/\"//g;
+
 # Grab the global document root/ default for the server
 # and start off the DocumentRoots hash with it.
-(my $ServerRoot = $main_conf->directive('DocumentRoot')) =~ s/\"//g;
+(my $MainDocRoot = $main_conf->directive('DocumentRoot')) =~ s/\"//g;
 
-my %DocumentRoots = ($ServerRoot => 1);
+my %DocumentRoots = ($MainDocRoot => 1);
 
 # We're going to be examining all of the included .conf files
 my @all_conf = ($apache->conf_file, map {glob($_)} $main_conf->directive('Include'));
@@ -191,6 +194,8 @@ for (@all_conf) {
                 if (defined $_->directive($type)) {
                     # For CustomLog and other logs needing formats, strip the format
                     my ($logfile) = split(' ',$_->directive($type));
+                    # For relative log paths, add the ServerRoot first
+                    $logfile = "$ServerRoot/$logfile" if $logfile !~ /^\//;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfile;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $logfile) ? 'Yes' : 'No';
                 }
