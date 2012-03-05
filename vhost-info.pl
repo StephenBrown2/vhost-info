@@ -8,17 +8,19 @@ use Getopt::Std;
 use File::Basename;
 use File::Spec;
 use Filesys::DiskUsage qw/du/;
+use Hash::Merge::Simple qw/merge clone_merge/;
 use Sys::Hostname;
 use LWP::Simple;
 use Net::DNS;
+use Data::Dumper;
 
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
-getopts('sdbran:');
+our($opt_b, $opt_d, $opt_s, $opt_r, $opt_m, $opt_a, $opt_n);
+getopts('bsdrman:');
 
-($opt_s, $opt_d, $opt_b, $opt_r) = (1) x 4 if $opt_a; # Set all variables, if the -a option is set
+($opt_b, $opt_s, $opt_d, $opt_r) = (1) x 4 if $opt_a; # Set all variables, if the -a option is set
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
@@ -28,7 +30,7 @@ if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
     print "Bye!\n";
     exit;
 }
-
+print "YOU PICKED M!\n" if $opt_m;
 # Find out our global IP address
 my $time_marker = time;
 my $myip = &ip_lookup_self;
@@ -80,6 +82,18 @@ map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @al
 #   );
 #
 my %conf_info = ();
+
+# This hash will contain information for all modules in sites returned by the search, in the form:
+#   %module_hash = {
+#       module => {
+#           'package' => value,
+#           'name' => value,
+#           'type' => value,
+#           'status' => value,
+#           'version' => value,
+#       }
+#   }
+my %site_modules = ();
 
 $time_marker = time;
 
@@ -163,6 +177,26 @@ for (@all_conf) {
                                     exists $drush{'database'} ? $drush{'database'} : "Error!";
                         $conf_info{$conf_file}{$ServerName}{'Drupal'}{'DB'}{'Size'} =
                                     drupal_db_size($DR) if ( $opt_b && exists $drush{'database'} );
+
+### MODULE CALL
+                        if ($opt_m) {
+                            # Create a hash from the pm-list and pm-update commands, then merge them.
+                            my %modules_info_hash = &drupal_modules($DR);
+                            my %modules_update_hash = &drupal_modules_update($DR);
+                            $site_modules{ $ServerName } = clone_merge( \%modules_info_hash, \%modules_update_hash );
+
+                            # Add information for each module that is already up to date
+                            foreach my $mod_key (keys %{$site_modules{$ServerName}}) {
+                                unless (defined $site_modules{$ServerName}{$mod_key}{'update_status'}) {
+                                    $site_modules{$ServerName}{$mod_key}{'update_status'} = 'Up to date';
+                                    $site_modules{$ServerName}{$mod_key}{'update_version'} = $site_modules{$ServerName}{$mod_key}{'version'};
+                                }
+                            }
+
+                        print "-"x30, " END $ServerName ", "-"x30, "\n";
+                        }
+### END MODULE CALL
+
                     } else { # Otherwise, just say so.
                         $conf_info{$conf_file}{$ServerName}{'Drupal'} = 'No';
                     }
@@ -196,15 +230,20 @@ if ($opt_r) {
     }
 }
 
+if ($opt_m) {
+    print Dumper( %site_modules );
+}
+
 ### BEGIN SUBROUTINES ###
 
 sub HELP_MESSAGE() {
     print "Usage: ".basename($0)." [OPTIONS]\n";
     print "  The following options are accepted:\n\n";
+    print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
     print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
     print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
-    print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
     print "\t-r\tPrint a list of the Document Roots at the end of the report\n\n";
+    print "\t-m\tDisplay information about modules installed on each site listed\n\n";
     print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
     print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
     print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
@@ -348,6 +387,80 @@ sub drupal_db_size {
 
     return $db_size_h;
 } # END SUB drupal_db_size
+
+sub drupal_modules {
+    # This subroutine returns the module information for a site based on the document root passed to it
+    # Note: This will (obviously) only work for drupal sites, and I've only implemented crude error checking
+    #   for non-drupal sites in this function.
+    chdir(shift);
+
+    # Hacked includes/drush.inc to add the --nowrap option
+    #  Reference: https://drupal.org/files/nowrap.patch
+    #  Comment Thread: https://drupal.org/node/1325140
+    open(PML_PIPE,"export COLUMNS=1000; drush --nowrap pml|");
+
+    my @pml_field;
+    my %pml;
+    my $is_drupal = 0;
+
+    while (<PML_PIPE>) {
+        chomp;
+        # The results will be spit out in a user-friendly format, but always separated by 2+ spaces. Parse it.
+        @pml_field = split /\s{2,}/;
+        # We want to skip the first (Titles) and last (blank) lines.
+        # If we come across output we're expecting (the titles), then we're good.
+        next unless (defined $pml_field[0] && defined $pml_field[1]);
+        if ($pml_field[0] =~ /Package/ && $pml_field[1] =~ /Name/) {
+            $is_drupal = 1;
+            next;
+        }
+        # Otherwise, we die.
+        die "Not a drupal installation, can't check modules.\n" if $is_drupal != 1;
+        # We split the Module name from it's machine-readable name, so we can key the hash on the latter,
+        #   which is always held in the last set of parentheses.
+        my ($name,$module) = ($pml_field[1] =~ /(.*)\(([^)]+)\)$/);
+        # Some modules/themes have no version... Lazy programmers.
+        $pml_field[4] = 'None' unless defined $pml_field[4];
+        # Assign the module information to the hash
+        ($pml{$module}{'package'} = $pml_field[0]) =~ s/^\s//;
+        ($pml{$module}{'name'} = $name) =~ s/\s$//;
+        $pml{$module}{'type'} = $pml_field[2];
+        $pml{$module}{'status'} = $pml_field[3];
+        $pml{$module}{'version'} = $pml_field[4];
+    }
+
+    close(PML_PIPE);
+
+    return %pml;
+} # END SUB drupal_modules
+
+sub drupal_modules_update {
+    # This subroutine returns the module update information for a drupal site when passed its document root
+    chdir(shift);
+
+    my @up_field;
+    my %pm_up;
+
+    # This will take about 20-30 seconds to refresh the update status information.
+    open(PMUP_PIPE,"drush --pipe pm-update|");
+
+    while (<PMUP_PIPE>) {
+        chomp;
+        # The results will be spit out in a space separated format
+        @up_field = split /\s/;
+
+        # Now we grab the information, disregarding blank lines
+        next unless (defined $up_field[0]);
+        $pm_up{$up_field[0]}{'version'} = $up_field[1];
+        $pm_up{$up_field[0]}{'update_version'} = $up_field[2];
+        ($pm_up{$up_field[0]}{'update_status'} = $up_field[3]) =~ s/-/ /g;
+
+    }
+
+    close(PMUP_PIPE);
+
+    return %pm_up;
+} # END SUB drupal_modules_update
 
 sub ip_lookup_self {
     use Switch qw(Perl5 Perl6); #Use native GIVEN/WHEN once upgraded to Perl 5.10+
