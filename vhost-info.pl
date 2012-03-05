@@ -189,8 +189,10 @@ for (@all_conf) {
             foreach my $type (@log_types) {
                 $type .= 'Log';
                 if (defined $_->directive($type)) {
-                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $_->directive($type);
-                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $_->directive($type)) ? 'Yes' : 'No';
+                    # For CustomLog and other logs needing formats, strip the format
+                    my ($logfile) = split(' ',$_->directive($type));
+                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfile;
+                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $logfile) ? 'Yes' : 'No';
                 }
             }
         }
