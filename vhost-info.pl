@@ -54,6 +54,8 @@ my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 
 my %DocumentRoots = ($MainDocRoot => 1);
 
+my %LogFiles = ();
+
 # We're going to be examining all of the included .conf files
 my @all_conf = ($apache->conf_file, map {glob($_)} $main_conf->directive('Include'));
 map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @all_conf;
@@ -201,6 +203,7 @@ for (@all_conf) {
                     $logfile = "$ServerRoot/$logfile" if $logfile !~ /^\//;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfile;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $logfile) ? 'Yes' : 'No';
+                    $LogFiles{$logfile}++;
                     $error = 1 if $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} eq 'No';
                 }
             }
@@ -223,6 +226,17 @@ if ($opt_r) {
     foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
     {
         printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
+    }
+}
+
+# Summary of log files at the end
+if ($opt_l) {
+    print STDERR '-' x 80, "\n\nLog files to be aware of:\n\n";
+    foreach (sort keys %LogFiles)
+    {
+        printf "$_ %s\n", (!-f $_) ? "(Does not exist)" : "";
+        print "$_\n" if (-f $_);
+        print STDERR "$_ (Does not exist)\n" if (!-f $_);
     }
 }
 
