@@ -15,13 +15,16 @@ use Net::DNS;
 # Error status code
 my $error = 0;
 
+
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
-getopts('lsdbran:');
+our($opt_v, $opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
+getopts('vlsdbran:');
 
-($opt_l, $opt_s, $opt_d, $opt_b, $opt_r) = (1) x 5 if $opt_a; # Set all variables, if the -a option is set
+our $verbose = $opt_v;
+
+($opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $verbose) = (1) x 6 if $opt_a; # Set all variables, if the -a option is set
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
@@ -37,7 +40,7 @@ my $time_marker = time;
 my $myip = &ip_lookup_self;
 my $new_time_marker = (time - $time_marker);
 print STDERR "Finding our external IP address took $new_time_marker " .
-    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker;
+    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $verbose;
 
 # Check for the current httpd.conf file in use
 # Note: This only finds the first httpd in the path.
@@ -105,7 +108,7 @@ printf "%15s %s\n%15s %s\n%15s %s\n%15s %s (%s)\n\n",
     "on date:", scalar localtime,
     "for server:", hostname, $myip;
 
-print STDERR "Working... Please be patient.\n";
+print STDERR "Working... Please be patient.\n" if $verbose;
 
 for (@all_conf) {
 
@@ -217,7 +220,7 @@ for (@all_conf) {
 
 $new_time_marker = (time - $time_marker);
 print STDERR "Gathering information took $new_time_marker " .
-    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker;
+    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $verbose;
 
 # The Big Print function
 &printInfoHash(%conf_info);
