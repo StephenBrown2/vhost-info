@@ -12,6 +12,9 @@ use Sys::Hostname;
 use LWP::Simple;
 use Net::DNS;
 
+# Error status code
+$error = 0;
+
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
@@ -193,6 +196,7 @@ for (@all_conf) {
                     my ($logfile) = split(' ',$_->directive($type));
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfile;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $logfile) ? 'Yes' : 'No';
+                    $error = 1 if $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} eq 'No';
                 }
             }
         }
@@ -216,6 +220,11 @@ if ($opt_r) {
         printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
     }
 }
+
+exit $error;
+
+### END MAIN PROGRAM ###
+
 
 ### BEGIN SUBROUTINES ###
 
