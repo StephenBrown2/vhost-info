@@ -233,10 +233,9 @@ if ($opt_r) {
 
 # Summary of log files at the end
 if ($opt_l) {
-    print STDERR '-' x 80, "\n\nLog files to be aware of:\n\n";
+    print '-' x 80, "\n\nLog files to be aware of:\n\n";
     foreach (sort keys %LogFiles)
     {
-        printf "$_ %s\n", (!-f $_) ? "(Does not exist)" : "";
         print "$_\n" if (-f $_);
         print STDERR "$_ (Does not exist)\n" if (!-f $_);
     }
