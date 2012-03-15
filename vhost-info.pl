@@ -13,7 +13,7 @@ use LWP::Simple;
 use Net::DNS;
 
 # Error status code
-$error = 0;
+my $error = 0;
 
 # getopt parameters and settings
 $main::VERSION = "0.2";
