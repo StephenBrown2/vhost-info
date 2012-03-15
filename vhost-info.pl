@@ -199,6 +199,8 @@ for (@all_conf) {
                 if (defined $_->directive($type)) {
                     # For CustomLog and other logs needing formats, strip the format
                     my ($logfile) = split(' ',$_->directive($type));
+                    # For log paths in quotes, remove quotes.
+                    $logfile =~ s/"//g;
                     # For relative log paths, add the ServerRoot first
                     $logfile = "$ServerRoot/$logfile" if $logfile !~ /^\//;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfile;
