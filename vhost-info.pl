@@ -417,13 +417,14 @@ sub ip_lookup_self {
     use Switch qw(Perl5 Perl6); #Use native GIVEN/WHEN once upgraded to Perl 5.10+
     my $ip;
     until ( defined $ip) {
-        given (int(rand(6))) {
+        given (int(rand(7))) {
             when 0 { $ip = get("http://icanhazip.com"); }
-            when 1 { $ip = get("http://showip.codebrainz.ca"); }
-            when 2 { $ip = get("http://www.showmyip.com/simple/"); }
-            when 3 { $ip = get("http://cfaj.freeshell.org/ipaddr.cgi"); }
-            when 4 { $ip = get("https://secure.informaction.com/ipecho"); }
-            when 5 { $ip = get("http://automation.whatismyip.com/n09230945.asp"); }
+            when 1 { $ip = get("http://ifconfig.me/ip"); }
+            when 2 { $ip = get("http://showip.codebrainz.ca"); }
+            when 3 { $ip = get("http://www.showmyip.com/simple/"); }
+            when 4 { $ip = get("http://cfaj.freeshell.org/ipaddr.cgi"); }
+            when 5 { $ip = get("https://secure.informaction.com/ipecho"); }
+            when 6 { $ip = get("http://automation.whatismyip.com/n09230945.asp"); }
         }
     }
     chomp($ip);
