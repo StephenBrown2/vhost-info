@@ -49,7 +49,7 @@ my $apache = App::Info::HTTPD::Apache->new;
 my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 
 # Grab the global ServerRoot
-(my $ServerRoot = $main_conf->directive('ServerRoot')) =~ s/\"//g;
+my $ServerRoot = $apache->httpd_root;
 
 # Grab the global document root/ default for the server
 # and start off the DocumentRoots hash with it.
@@ -61,7 +61,7 @@ my %LogFiles = ();
 
 # We're going to be examining all of the included .conf files
 my @all_conf = ($apache->conf_file, map {glob($_)} $main_conf->directive('Include'));
-map { $_ = File::Spec->rel2abs($_, $apache->httpd_root) } grep { m/\.conf/ } @all_conf;
+map { $_ = File::Spec->rel2abs($_, $ServerRoot) } grep { m/\.conf/ } @all_conf;
 
 # This hash will contain all the data for each virtualhost, as a hash of hashes in the form:
 #   %thehash = (
