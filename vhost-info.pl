@@ -426,6 +426,12 @@ sub ip_lookup_self {
             when 5 { $ip = get("https://secure.informaction.com/ipecho"); }
             when 6 { $ip = get("http://automation.whatismyip.com/n09230945.asp"); }
         }
+        eval {
+            local $SIG{ALRM} = sub { die "alarm\n" };
+            alarm 2;
+            $ip = get($ip_service);
+            alarm 0;
+        };
     }
     chomp($ip);
     return $ip;
