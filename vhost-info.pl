@@ -418,14 +418,16 @@ sub ip_lookup_self {
     my $ip;
     my $ip_service;
     until ( defined $ip && $ip =~ /(\d{1,3}\.){3}\d{1,3}/ ) {
-        given (int(rand(7))) {
-            when 0 { $ip_service = "http://icanhazip.com"; }
-            when 1 { $ip_service = "http://ifconfig.me/ip"; }
-            when 2 { $ip_service = "http://showip.codebrainz.ca"; }
-            when 3 { $ip_service = "http://www.showmyip.com/simple/"; }
-            when 4 { $ip_service = "http://cfaj.freeshell.org/ipaddr.cgi"; }
-            when 5 { $ip_service = "https://secure.informaction.com/ipecho"; }
-            when 6 { $ip_service = "http://automation.whatismyip.com/n09230945.asp"; }
+        given (int(rand(6))) {
+            when 0 { $ip_service = "http://tnx.nl/ip"; }
+            when 1 { $ip_service = "http://icanhazip.com"; }
+            when 2 { $ip_service = "http://ifconfig.me/ip"; }
+            when 3 { $ip_service = "http://ip.appspot.com"; }
+            when 4 { $ip_service = "http://myip.dnsomatic.com"; }
+            when 5 { $ip_service = "http://www.showmyip.com/simple/"; }
+            when 6 { $ip_service = "https://secure.informaction.com/ipecho/"; }
+            when 7 { $ip_service = "http://automation.whatismyip.com/n09230945.asp"; }
+            else {}
         }
         eval {
             local $SIG{ALRM} = sub { die "alarm\n" };
