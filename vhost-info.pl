@@ -19,12 +19,12 @@ my $error = 0;
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_v, $opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n);
-getopts('vlsdbran:');
+our($opt_v, $opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n, $opt_g);
+getopts('vlsdbragn:');
 
 our $verbose = $opt_v;
 
-($opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $verbose) = (1) x 6 if $opt_a; # Set all variables, if the -a option is set
+($opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_g, $verbose) = (1) x 7 if $opt_a; # Set all variables, if the -a option is set
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
 if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
@@ -92,7 +92,11 @@ map { $_ = File::Spec->rel2abs($_, $ServerRoot) } grep { m/\.conf/ } @all_conf;
 #                                   'User' => value,
 #                                   'Status' => value,
 #                                   'Size' => value }
-#                           }
+#                           },
+#               'Git' => {
+#                       'is_repository' => value,
+#                       'remote_repo' => value }
+#               }
 #           }
 #       }
 #   );
@@ -188,6 +192,17 @@ for (@all_conf) {
                     my %drush = &drush_status($DR);
                     $conf_info{$conf_file}->{$ServerName}{'Drupal'}{'DB'}{'Size'} =
                                 drupal_db_size($DR) if ( $opt_b && exists $drush{'database'} );
+                }
+                if ($opt_g) {
+                    my $is_repo = `cd $DR && git rev-parse --is-inside-work-tree 2>&1 | head -1`;
+                    chomp $is_repo;
+                    if ($is_repo eq 'true') {
+                        $conf_info{$conf_file}{$ServerName}{'Git'}{'is_repository'} = $is_repo;
+                        $conf_info{$conf_file}{$ServerName}{'Git'}{'remote_repo'} = `cd $DR && git remote -v`;
+                        chomp $conf_info{$conf_file}{$ServerName}{'Git'}{'remote_repo'};
+                    } else {
+                        $conf_info{$conf_file}{$ServerName}{'Git'}{'is_repository'} = 'false';
+                    }
                 }
         } else {
             $DocumentRoots{$DR}--;  # Decrement to put the entry at the bottom of the list when printing.
@@ -322,6 +337,14 @@ sub printInfoHash {
                 } else {
                     printf $fstr, "Drupal", "No" if $opt_d;
                 } #END DRUPAL CHECK
+                if ( defined $InfoHash{$file}{$vhost}{'Git'}{'is_repository'} ) {
+                    printf $fstr, "Git", $InfoHash{$file}{$vhost}{'Git'}{'is_repository'};
+                    if ( defined $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'} ) {
+                        my $trans = '  '.' ' x $spaces;
+                        $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'} =~ s{\n}{\n$trans};
+                        printf $fstr, "Git Remote", $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'};
+                    }
+                }
             }
             print "\n";
         } #END VHOST LOOP
