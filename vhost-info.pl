@@ -270,8 +270,9 @@ sub VERSION_MESSAGE() {
 
 sub printInfoHash {
     my (%InfoHash) = @_;
-    my $fstr = "%15s: %s\n";
-    my $ipfstr = "%15s: %s (%s)\n";
+    my $spaces = 15;
+    my $fstr = "%${spaces}s: %s\n";
+    my $ipfstr = "%${spaces}s: %s (%s)\n";
     for my $file ( keys %InfoHash ) {
         print '-' x 80;
         print "\nConf file: $file\n\n";
