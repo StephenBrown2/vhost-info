@@ -417,6 +417,7 @@ sub ip_lookup_self {
     use Switch qw(Perl5 Perl6); #Use native GIVEN/WHEN once upgraded to Perl 5.10+
     my $ip;
     my $ip_service;
+    print STDERR "Looking up IP\n";
     until ( defined $ip && $ip =~ /(\d{1,3}\.){3}\d{1,3}/ ) {
         given (int(rand(6))) {
             when 0 { $ip_service = "http://tnx.nl/ip"; }
@@ -429,6 +430,7 @@ sub ip_lookup_self {
             when 7 { $ip_service = "http://automation.whatismyip.com/n09230945.asp"; }
             else {}
         }
+        print STDERR "Trying: $ip_service\n";
         eval {
             local $SIG{ALRM} = sub { die "alarm\n" };
             alarm 2;
@@ -437,6 +439,7 @@ sub ip_lookup_self {
         };
     }
     chomp($ip);
+    print STDERR "IP ($ip) found from: $ip_service\n";
     return $ip;
 } # END SUB ip_lookup_self
 
