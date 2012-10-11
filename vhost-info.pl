@@ -178,13 +178,28 @@ for (@all_conf) {
         my $DR = $_->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
         # Check if the site url (ServerName) we are looking at is actually a multi-site Drupal install
         if (defined $_->directive('ServerName')) {
-            (my $NameSansWWW = $_->directive('ServerName')) =~ s/www\.//;
-            if (-d $DR."/sites/".$_->directive('ServerName')) {
-                $DR = File::Spec->canonpath($DR."/sites/".$_->directive('ServerName'));
-            } elsif (-d $DR."/sites/".$NameSansWWW) {
-                $DR = File::Spec->canonpath($DR."/sites/".$NameSansWWW);
-            } else {
-                $DR = File::Spec->canonpath($DR);
+            my @SitesDirPossibilities = ();
+
+            my $VhostName = $_->directive('ServerName')->value;
+            push (@SitesDirPossibilities, $VhostName);
+
+            (my $NameSansWWW = $VhostName) =~ s/www\.//;
+            push (@SitesDirPossibilities, $NameSansWWW);
+
+            if (-f "$DR/sites/sites.php") { # Check if there is a Drupal 7 sites.php file
+                my $SitesDir = parse_sites_php_file("$DR/sites/sites.php", "$VhostName");
+                push (@SitesDirPossibilities, $SitesDir);
+
+                my $SitesDirSansWWW = parse_sites_php_file("$DR/sites/sites.php", "$NameSansWWW");
+                push (@SitesDirPossibilities, $SitesDirSansWWW);
+            }
+
+            foreach my $dir (@SitesDirPossibilities) {
+                next if ($dir eq '');
+                if (-d "$DR/sites/$dir") {
+                    $DR = File::Spec->canonpath("$DR/sites/$dir");
+                    last;
+                }
             }
         }
 
@@ -445,6 +460,29 @@ sub drupal_db_size {
 
     return $db_size_h;
 } # END SUB drupal_db_size
+
+# Parses a sites.php file for a particular URL
+# and returns the corresponding directory name
+# or an empty string if no matches are found.
+#
+sub parse_sites_php_file {
+    my $file = shift or die "Must have filename";
+    my $site = shift or die "Must have string to parse";
+
+    open SITESPHP, "<", "$file" or die "Cannot open file $file: $!";
+
+    my $regex = qr/^\s*\$sites\[\s*['"]$site['"]\s*\]\s*=\s*['"]([^']+)['"]\s*;/;
+
+    while (<SITESPHP>) {
+        if (/$regex/) {
+            chomp;
+            close SITESPHP;
+            return $1;
+        }
+    }
+    close SITESPHP;
+    return '';
+}
 
 sub ip_lookup_self {
     use Switch qw(Perl5 Perl6); #Use native GIVEN/WHEN once upgraded to Perl 5.10+
