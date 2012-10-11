@@ -19,8 +19,34 @@ my $error = 0;
 # getopt parameters and settings
 $main::VERSION = "0.2";
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_v, $opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n, $opt_g);
-getopts('vlsdbragn:');
+our($opt_v, $opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n, $opt_g, $opt_h);
+getopts('vlsdbraghn:');
+
+# HELP and VERSION messages for early evaluation
+sub HELP_MESSAGE() {
+    print "Usage: ".basename($0)." [OPTIONS]\n";
+    print "  The following options are accepted:\n\n";
+    print "\t-h\tPrints this help message and exits immediately. Also --help\n\n";
+    print "\t-l\tCheck if any log files mentioned in conf file are missing\n\n";
+    print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
+    print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
+    print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
+    print "\t-r\tPrint a list of the Document Roots at the end of the report\n\n";
+    print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
+    print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
+    print "\t-g\tPrint relevant git information, namely if the directory is in a git repository,\n";
+    print "\t\tand if so, the remote repository information (if available, blank if none).\n\n";
+    print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
+} # END SUB HELP_MESSAGE
+
+sub VERSION_MESSAGE() {
+    print basename($0)." - version $main::VERSION\n";
+} # END SUB VERSION_MESSAGE
+
+if ( $opt_h ) {
+    HELP_MESSAGE();
+    exit;
+}
 
 our $verbose = $opt_v;
 
@@ -265,23 +291,6 @@ exit $error;
 
 
 ### BEGIN SUBROUTINES ###
-
-sub HELP_MESSAGE() {
-    print "Usage: ".basename($0)." [OPTIONS]\n";
-    print "  The following options are accepted:\n\n";
-    print "\t-l\tCheck if any log files mentioned in conf file are missing\n\n";
-    print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
-    print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
-    print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
-    print "\t-r\tPrint a list of the Document Roots at the end of the report\n\n";
-    print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
-    print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
-    print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
-} # END SUB HELP_MESSAGE
-
-sub VERSION_MESSAGE() {
-    print basename($0)." - version $main::VERSION\n";
-} # END SUB VERSION_MESSAGE
 
 sub printInfoHash {
     my (%InfoHash) = @_;
