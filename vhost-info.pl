@@ -365,7 +365,7 @@ sub printInfoHash {
                     printf $fstr, "Git", $InfoHash{$file}{$vhost}{'Git'}{'is_repository'};
                     if ( defined $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'} ) {
                         my $trans = '  '.' ' x $spaces;
-                        $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'} =~ s{\n}{\n$trans};
+                        $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'} =~ s{\n}{\n$trans}g;
                         printf $fstr, "Git Remote", $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'};
                     }
                 }
