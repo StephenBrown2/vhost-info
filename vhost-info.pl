@@ -148,9 +148,11 @@ for (@all_conf) {
     my $opt_n_file_match = 0;
 
     foreach($conf->section('VirtualHost')) {
+        my $VhostConf = $_;
         my $ServerName;
-        if ( defined $_->directive('ServerName') ) {
-            $ServerName = $_->directive('ServerName')->value;
+
+        if ( defined $VhostConf->directive('ServerName') ) {
+            $ServerName = $VhostConf->directive('ServerName')->value;
             (my $name = $ServerName) =~ s/:.*//;
             $conf_info{$conf_file}{$name}{'URL'} = $name;
             $conf_info{$conf_file}{$name}{'IP'} = &ip_lookup($name);
@@ -160,7 +162,7 @@ for (@all_conf) {
             next; #All VirtualHosts must have a ServerName.
         }
 
-        foreach($_->directive('ServerAlias')) {
+        foreach($VhostConf->directive('ServerAlias')) {
             (my $name = $_->value) =~ s/:.*//;
             $conf_info{$conf_file}{$ServerName}{'Aliases'}{$name} = &ip_lookup($name);
             ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
@@ -175,12 +177,12 @@ for (@all_conf) {
         }
 
         # Check to see if there is a DocumentRoot defined in the VirtualHost
-        my $DR = $_->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
+        my $DR = $VhostConf->directive('DocumentRoot') ? File::Spec->canonpath($_->directive('DocumentRoot')) : 'None';
         # Check if the site url (ServerName) we are looking at is actually a multi-site Drupal install
-        if (defined $_->directive('ServerName')) {
+        if (defined $VhostConf->directive('ServerName')) {
             my @SitesDirPossibilities = ();
 
-            my $VhostName = $_->directive('ServerName')->value;
+            my $VhostName = $VhostConf->directive('ServerName')->value;
             push (@SitesDirPossibilities, $VhostName);
 
             (my $NameSansWWW = $VhostName) =~ s/www\.//;
@@ -209,7 +211,7 @@ for (@all_conf) {
         $DocumentRoots{$DR}++;
 
         if ($DR eq 'None') {
-            foreach my $direc ($_->directive()){
+            foreach my $direc ($VhostConf->directive()){
                 $conf_info{$conf_file}{$ServerName}{'Directives'}{$direc->name} = $direc->value
                     unless ($direc->name eq 'ServerName' || $direc->name eq 'ServerAlias');
             }
@@ -255,9 +257,9 @@ for (@all_conf) {
             my @log_types = qw(Error Custom Forensic Rewrite Script Transfer);
             foreach my $type (@log_types) {
                 $type .= 'Log';
-                if (defined $_->directive($type)) {
+                if (defined $VhostConf->directive($type)) {
                     # For CustomLog and other logs needing formats, strip the format
-                    my ($logfile) = split(' ',$_->directive($type));
+                    my ($logfile) = split(' ',$VhostConf->directive($type));
                     # For log paths in quotes, remove quotes.
                     $logfile =~ s/"//g;
                     # For relative log paths, add the ServerRoot first
