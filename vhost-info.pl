@@ -61,6 +61,13 @@ if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
     exit;
 }
 
+# Determine if httpd is being used, or apache2ctl
+our $APACHEBIN;
+if ( my $testout = qx( httpd -v &2>1 ) and $?>>8 == 0 ) { $APACHEBIN = 'httpd'; }
+elsif ( $testout = qx( apache2ctl -v &2>1 ) and $?>>8 == 0 ) { $APACHEBIN = 'apache2ctl'; }
+else { die("Error: Could not find Apache on this system\n"); }
+print "Apache is known as -",`which $APACHEBIN`,"-\n";
+
 # Find out our global IP address
 my $time_marker = time;
 my $myip = &ip_lookup_self;
