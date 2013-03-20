@@ -12,9 +12,11 @@ use Sys::Hostname;
 use LWP::Simple;
 use Net::DNS;
 
+# Run this script with root privs, but check first
+exec '/usr/bin/sudo', $0, @ARGV unless exists $ENV{SUDO_USER} or $ENV{USER} eq 'root';
+
 # Error status code
 my $error = 0;
-
 
 # getopt parameters and settings
 $main::VERSION = "0.2";
@@ -74,20 +76,45 @@ print STDERR "Finding our external IP address took $new_time_marker " .
 my $apache = App::Info::HTTPD::Apache->new;
 my $main_conf = new Apache::Admin::Config( $apache->conf_file );
 
+# Determine how Apache is being called
+our $APACHEBINPATH = $apache->executable;
+our $APACHEBIN = basename($APACHEBINPATH);
+our $APACHECTLPATH = ($APACHEBINPATH =~ 'apache2') ? "${APACHEBINPATH}ctl" : $APACHEBINPATH;
+our $APACHECTL = basename($APACHECTLPATH);
+print STDERR "Perl thinks the Apache executable is: $APACHEBIN\nand the control program is: $APACHECTL\n";
+
 # Grab the global ServerRoot
 my $ServerRoot = $apache->httpd_root;
 
 # Grab the global document root/ default for the server
 # and start off the DocumentRoots hash with it.
-(my $MainDocRoot = $main_conf->directive('DocumentRoot')) =~ s/\"//g;
+my $MainDocRoot = $apache->doc_root;
+
+# If the DocumentRoot isn't specified in the main conf file, look in default locations
+if ( ! $MainDocRoot ) {
+    if ( $APACHEBIN eq "httpd" ) { $MainDocRoot = '/var/www/html'; }
+    else {
+        my $default_conf = new Apache::Admin::Config( '/etc/apache2/sites-available/default' );
+        $MainDocRoot = $default_conf->section('VirtualHost')->directive('DocumentRoot');
+    }
+}
 
 my %DocumentRoots = ($MainDocRoot => 1);
 
 my %LogFiles = ();
 
+# Now we will begin by parsing the output of apache's -t -D DUMP_VHOSTS
 # We're going to be examining all of the included .conf files
-my @all_conf = ($apache->conf_file, map {glob($_)} $main_conf->directive('Include'));
-map { $_ = File::Spec->rel2abs($_, $ServerRoot) } grep { m/\.conf/ } @all_conf;
+open(DUMP_VHOSTS,"$APACHECTLPATH -t -S 2>/dev/null |") or die $!;
+my @all_conf;
+while (<DUMP_VHOSTS>) {
+        m@.*port\s+([0-9]+)\s+\w+\s+(\S+)\s+\((.+):([0-9])\).*@ && do {
+        my ($PORT, $URL, $CONF) = ($1, $2, $3);
+        #print "PORT = $PORT, URL = $URL, CONF = $CONF\n";
+        push @all_conf, $CONF;
+    };
+}
+close(DUMP_VHOSTS);
 
 # This hash will contain all the data for each virtualhost, as a hash of hashes in the form:
 #   %thehash = (
