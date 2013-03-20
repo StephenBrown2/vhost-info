@@ -11,6 +11,7 @@ use Filesys::DiskUsage qw/du/;
 use Sys::Hostname;
 use LWP::Simple;
 use Net::DNS;
+use POSIX qw/strftime/;
 
 # Run this script with root privs, but check first
 exec '/usr/bin/sudo', $0, @ARGV unless exists $ENV{SUDO_USER} or $ENV{USER} eq 'root';
@@ -286,13 +287,19 @@ for (@all_conf) {
             foreach my $type (@log_types) {
                 $type .= 'Log';
                 if (defined $VhostConf->directive($type)) {
+                    my $logfiledirective = $VhostConf->directive($type);
                     # For CustomLog and other logs needing formats, strip the format
-                    my ($logfile) = split(' ',$VhostConf->directive($type));
+                    my @logdirective = split(' ',$logfiledirective);
                     # For log paths in quotes, remove quotes.
-                    $logfile =~ s/"//g;
+                    map( s/"//g, @logdirective );
+                    # If the last element isn't a path, it's a format
+                    my $logformat = pop(@logdirective) if $logdirective[-1] !~ /\//;
+                    # Necessary to resolve cronolog entries. Naive assumption
+                    # that the last element is a path, but generally correct.
+                    my $logfile = strftime($logdirective[-1],localtime);
                     # For relative log paths, add the ServerRoot first
-                    $logfile = "$ServerRoot/$logfile" if $logfile !~ /^\//;
-                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfile;
+                    $logfile = File::Spec->rel2abs($logfile,$ServerRoot);
+                    $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Path'} = $logfiledirective;
                     $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} = (-f $logfile) ? 'Yes' : 'No';
                     $LogFiles{$logfile}++;
                     $error = 1 if $conf_info{$conf_file}{$ServerName}{'Logs'}{$type}{'Exists'} eq 'No';
