@@ -105,7 +105,7 @@ my %LogFiles = ();
 
 # Now we will begin by parsing the output of apache's -t -D DUMP_VHOSTS
 # We're going to be examining all of the included .conf files
-open(DUMP_VHOSTS,"$APACHECTLPATH -t -S 2>/dev/null |") or die $!;
+open(DUMP_VHOSTS,"$APACHECTLPATH -t -S 2>&1 |") or die $!;
 my @all_conf;
 while (<DUMP_VHOSTS>) {
         m@.*port\s+([0-9]+)\s+\w+\s+(\S+)\s+\((.+):([0-9])\).*@ && do {
