@@ -308,25 +308,34 @@ $new_time_marker = (time - $time_marker);
 print STDERR "Gathering information took $new_time_marker " .
     (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $verbose;
 
-# The Big Print function
-&printInfoHash(%conf_info);
+# Make sure there is stuff to print before trying
+if (! scalar keys %conf_info) {
+   if ($opt_n) {
+       print "Nothing found matching '$opt_n'!\n\n";
+   } else {
+       print "Nothing found!\nThis could be serious.\nAre you sure things are working properly?\n\n";
+   }
+} else {
+    # The Big Print function
+    &printInfoHash(%conf_info);
 
-# Summary of document roots at the end
-if ($opt_r) {
-    print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
-    foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
-    {
-        printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
+    # Summary of document roots at the end
+    if ($opt_r) {
+        print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
+        foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
+        {
+            printf "$_ %s\n", (!-d $_) ? "(Does not exist)" : "" unless $_ eq "None";
+        }
     }
-}
 
-# Summary of log files at the end
-if ($opt_l) {
-    print '-' x 80, "\n\nLog files to be aware of:\n\n";
-    foreach (sort keys %LogFiles)
-    {
-        print "$_\n" if (-f $_);
-        print STDERR "$_ (Does not exist)\n" if (!-f $_);
+    # Summary of log files at the end
+    if ($opt_l) {
+        print '-' x 80, "\n\nLog files to be aware of:\n\n";
+        foreach (sort keys %LogFiles)
+        {
+            print "$_\n" if (-f $_);
+            print STDERR "$_ (Does not exist)\n" if (!-f $_);
+        }
     }
 }
 
