@@ -4,7 +4,7 @@ use strict;
 
 use Apache::Admin::Config;
 use App::Info::HTTPD::Apache;
-use Getopt::Std;
+use Getopt::Long::Descriptive;
 use File::Basename;
 use File::Spec;
 use Filesys::DiskUsage qw/du/;
@@ -18,44 +18,30 @@ exec '/usr/bin/sudo', $0, @ARGV unless exists $ENV{SUDO_USER} or $ENV{USER} eq '
 # Error status code
 my $error = 0;
 
-# getopt parameters and settings
-$main::VERSION = "0.2";
-$Getopt::Std::STANDARD_HELP_VERSION = 1;
-our($opt_v, $opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_a, $opt_n, $opt_g, $opt_h);
-getopts('vlsdbraghn:');
+# Getopt::Long::Descriptive configuration
+my ($opt, $usage) = describe_options(
+    'Usage: %c %o',
+    [ 'logs|l', 'Check if any log files mentioned in conf file are missing' ],
+    [ 'size|s', 'Display the size of each DocumentRoot and all subdirs' ],
+    [ 'drupal|d', 'Display the status of a Drupal install by running `drush status` in each DocumentRoot' ],
+    [ 'dbsize|b', 'Display the size of the Drupal database, if it exists' ],
+    [ 'roots|r', 'Print a list of the Document Roots at the end of the report' ],
+    [ 'git|g', 'Print relevant git information, namely if the directory is in a git repository, and if available, the remote repository information' ],
+    [ 'all|a', 'Perform all of the above, with verbose output. Overrides above options if specified',
+        { implies => [qw/logs size drupal dbsize roots git verbose/] }
+    ],
+    [ 'name|n=s', 'Filter results found by vhost ServerName or Alias. Usage: -n \'filterurl\'' ],
+    [],
+    [ 'verbose|v', 'Prints extra information during run' ],
+    [ 'help|h', 'Prints this help message and exits immediately.' ],
+    [],
+);
 
-# HELP and VERSION messages for early evaluation
-sub HELP_MESSAGE() {
-    print "Usage: ".basename($0)." [OPTIONS]\n";
-    print "  The following options are accepted:\n\n";
-    print "\t-h\tPrints this help message and exits immediately. Also --help\n\n";
-    print "\t-l\tCheck if any log files mentioned in conf file are missing\n\n";
-    print "\t-s\tDisplay the size of each DocumentRoot and all subdirs\n\n";
-    print "\t-d\tDisplay the status of a Drupal install by running \"drush status\" in each DocumentRoot\n\n";
-    print "\t-b\tDisplay the size of the Drupal database, if it exists\n\n";
-    print "\t-r\tPrint a list of the Document Roots at the end of the report\n\n";
-    print "\t-a\tPerform all of the above. Overrides above options if specified\n\n";
-    print "\t-n\tFilter results found by vhost ServerName or Alias. Usage: -n 'filterurl'\n\n";
-    print "\t-g\tPrint relevant git information, namely if the directory is in a git repository,\n";
-    print "\t\tand if so, the remote repository information (if available, blank if none).\n\n";
-    print "Note: Options may be merged together, and option '-n' may be used with any other option.\n\n";
-} # END SUB HELP_MESSAGE
 
-sub VERSION_MESSAGE() {
-    print basename($0)." - version $main::VERSION\n";
-} # END SUB VERSION_MESSAGE
-
-if ( $opt_h ) {
-    HELP_MESSAGE();
-    exit;
-}
-
-our $verbose = $opt_v;
-
-($opt_l, $opt_s, $opt_d, $opt_b, $opt_r, $opt_g, $verbose) = (1) x 7 if $opt_a; # Set all variables, if the -a option is set
+print($usage->text), exit if $opt->help;
 
 # If the option to check drupal installs using drush is used, make sure we have drush installed first!
-if ( $opt_d && system("which drush 2>1&>/dev/null") ) {
+if ( $opt->drupal && system("which drush 2>1&>/dev/null") ) {
     print "Sorry, it doesn't appear that you have drush installed in a place I can access it.\n";
     print "Maybe you do, but it isn't aliased or included in your PATH?\n";
     print "At any rate, you'll need to fix that before you can use the -d option.\n";
@@ -68,7 +54,7 @@ my $time_marker = time;
 my $myip = &ip_lookup_self;
 my $new_time_marker = (time - $time_marker);
 print STDERR "Finding our external IP address took $new_time_marker " .
-    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $verbose;
+    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $opt->verbose;
 
 # Check for the current httpd.conf file in use
 # Note: This only finds the first httpd in the path.
@@ -166,14 +152,16 @@ printf "%15s %s\n%15s %s\n%15s %s\n%15s %s (%s)\n%15s %s\n\n",
     "for server:", hostname, $myip,
     "main conf:", $apache->conf_file;
 
-print STDERR "Working... Please be patient.\n" if $verbose;
+print STDERR "Working... Please be patient.\n" if $opt->verbose;
+
+my $opt_name = $opt->name;
 
 for (@all_conf) {
 
     my $conf = new Apache::Admin::Config($_);
     my $conf_file = $_;
-    my $opt_n_vhost_match = 0;
-    my $opt_n_file_match = 0;
+    my $opt_name_vhost_match = 0;
+    my $opt_name_file_match = 0;
 
     foreach($conf->section('VirtualHost')) {
         my $VhostConf = $_;
@@ -185,7 +173,7 @@ for (@all_conf) {
             $conf_info{$conf_file}{$name}{'URL'} = $name;
             $conf_info{$conf_file}{$name}{'IP'} = &ip_lookup($name);
             $ServerName = $name;
-            ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
+            ($opt_name_vhost_match = 1 && $opt_name_file_match = 1) if (defined $opt_name && $name =~ m/$opt_name/);
         } else {
             next; #All VirtualHosts must have a ServerName.
         }
@@ -193,15 +181,15 @@ for (@all_conf) {
         foreach($VhostConf->directive('ServerAlias')) {
             (my $name = $_->value) =~ s/:.*//;
             $conf_info{$conf_file}{$ServerName}{'Aliases'}{$name} = &ip_lookup($name);
-            ($opt_n_vhost_match = 1 && $opt_n_file_match = 1) if (defined $opt_n && $name =~ /$opt_n/);
+            ($opt_name_vhost_match = 1 && $opt_name_file_match = 1) if (defined $opt_name && $name =~ /$opt_name/);
         }
 
         # Check for match in ServerName or ServerAlias, if -n defined.
         # If no match, delete entry from hash and skip to next vhost.
         # If there is a match, just reset the 'matched' value.
-        if (defined $opt_n) {
-            (delete $conf_info{$conf_file}{$ServerName} && next) if $opt_n_vhost_match == 0;
-            $opt_n_vhost_match = 0;
+        if (defined $opt_name) {
+            (delete $conf_info{$conf_file}{$ServerName} && next) if $opt_name_vhost_match == 0;
+            $opt_name_vhost_match = 0;
         }
 
         # Check to see if there is a DocumentRoot defined in the VirtualHost
@@ -244,8 +232,8 @@ for (@all_conf) {
                     unless ($direc->name eq 'ServerName' || $direc->name eq 'ServerAlias');
             }
         } elsif ( -d $DR ) {
-                $conf_info{$conf_file}{$ServerName}{'DocumentRoot'}{'Size'} = du( {'Human-readable' => 1}, $DR ) if $opt_s;
-                if ($opt_d) {
+                $conf_info{$conf_file}{$ServerName}{'DocumentRoot'}{'Size'} = du( {'Human-readable' => 1}, $DR ) if $opt->size;
+                if ($opt->drupal) {
                     my %drush = &drush_status($DR);
                     if (exists $drush{'drupal_version'}) { # If Drupal is installed, tell me about it
                         $conf_info{$conf_file}{$ServerName}{'Drupal'}{'Version'} = $drush{'drupal_version'};
@@ -255,16 +243,16 @@ for (@all_conf) {
                         $conf_info{$conf_file}{$ServerName}{'Drupal'}{'DB'}{'Status'} =
                                     exists $drush{'database'} ? $drush{'database'} : "Error!";
                         $conf_info{$conf_file}{$ServerName}{'Drupal'}{'DB'}{'Size'} =
-                                    drupal_db_size($DR) if ( $opt_b && exists $drush{'database'} );
+                                    drupal_db_size($DR) if ( $opt->dbsize && exists $drush{'database'} );
                     } else { # Otherwise, just say so.
                         $conf_info{$conf_file}{$ServerName}{'Drupal'} = 'No';
                     }
-                } elsif ($opt_b) {
+                } elsif ($opt->dbsize) {
                     my %drush = &drush_status($DR);
                     $conf_info{$conf_file}->{$ServerName}{'Drupal'}{'DB'}{'Size'} =
-                                drupal_db_size($DR) if ( $opt_b && exists $drush{'database'} );
+                                drupal_db_size($DR) if ( $opt->dbsize && exists $drush{'database'} );
                 }
-                if ($opt_g) {
+                if ($opt->git) {
                     my $is_repo = `cd $DR && git rev-parse --is-inside-work-tree 2>&1 | head -1`;
                     chomp $is_repo;
                     if ($is_repo eq 'true') {
@@ -281,7 +269,7 @@ for (@all_conf) {
         }
 
         # Check for log files that do not exist
-        if ($opt_l) {
+        if ($opt->logs) {
             my @log_types = qw(Error Custom Forensic Rewrite Script Transfer);
             foreach my $type (@log_types) {
                 $type .= 'Log';
@@ -301,17 +289,17 @@ for (@all_conf) {
         }
     }
     # If there are no matching virtualhosts in the file, we can delete its reference
-    delete $conf_info{$conf_file} if (defined $opt_n && $opt_n_file_match == 0);
+    delete $conf_info{$conf_file} if (defined $opt_name && $opt_name_file_match == 0);
 }
 
 $new_time_marker = (time - $time_marker);
 print STDERR "Gathering information took $new_time_marker " .
-    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $verbose;
+    (($new_time_marker == 1) ? "second.\n" : "seconds.\n") if $new_time_marker and $opt->verbose;
 
 # Make sure there is stuff to print before trying
 if (! scalar keys %conf_info) {
-   if ($opt_n) {
-       print "Nothing found matching '$opt_n'!\n\n";
+   if ($opt_name) {
+       print "Nothing found matching '$opt_name'!\n\n";
    } else {
        print "Nothing found!\nThis could be serious.\nAre you sure things are working properly?\n\n";
    }
@@ -320,7 +308,7 @@ if (! scalar keys %conf_info) {
     &printInfoHash(%conf_info);
 
     # Summary of document roots at the end
-    if ($opt_r) {
+    if ($opt->roots) {
         print '-' x 80, "\n\nDocument Roots to be aware of:\n\n";
         foreach (sort {$DocumentRoots{$b} <=> $DocumentRoots{$a} or $a cmp $b} keys %DocumentRoots)
         {
@@ -329,7 +317,7 @@ if (! scalar keys %conf_info) {
     }
 
     # Summary of log files at the end
-    if ($opt_l) {
+    if ($opt->logs) {
         print '-' x 80, "\n\nLog files to be aware of:\n\n";
         foreach (sort keys %LogFiles)
         {
@@ -398,7 +386,7 @@ sub printInfoHash {
                         printf $fstr, "Database Size", $InfoHash{$file}{$vhost}{'Drupal'}{'DB'}{'Size'};
                     } #END DATABASE INFO
                 } else {
-                    printf $fstr, "Drupal", "No" if $opt_d;
+                    printf $fstr, "Drupal", "No" if $opt->drupal;
                 } #END DRUPAL CHECK
                 if ( defined $InfoHash{$file}{$vhost}{'Git'}{'is_repository'} ) {
                     printf $fstr, "Git", $InfoHash{$file}{$vhost}{'Git'}{'is_repository'};
