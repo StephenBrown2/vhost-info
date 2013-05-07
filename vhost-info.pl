@@ -25,10 +25,11 @@ my ($opt, $usage) = describe_options(
     [ 'size|s', 'Display the size of each DocumentRoot and all subdirs' ],
     [ 'drupal|d', 'Display the status of a Drupal install by running `drush status` in each DocumentRoot' ],
     [ 'dbsize|b', 'Display the size of the Drupal database, if it exists' ],
+    [ 'solr|o', 'Display module version and solr core url provided by apachesolr module in each DocumentRoot, if available' ],
     [ 'roots|r', 'Print a list of the Document Roots at the end of the report' ],
     [ 'git|g', 'Print relevant git information, namely if the directory is in a git repository, and if available, the remote repository information' ],
     [ 'all|a', 'Perform all of the above, with verbose output. Overrides above options if specified',
-        { implies => [qw/logs size drupal dbsize roots git verbose/] }
+        { implies => [qw/logs size drupal dbsize solr roots git verbose/] }
     ],
     [ 'name|n=s', 'Filter results found by vhost ServerName or Alias. Usage: -n \'filterurl\'' ],
     [],
@@ -256,6 +257,20 @@ for (@all_conf) {
                     $conf_info{$conf_file}->{$ServerName}{'Drupal'}{'DB'}{'Size'} =
                                 drupal_db_size($DR) if ( $opt->dbsize && exists $drush{'database'} );
                 }
+                if ($opt->solr) {
+                    my $solr_url = `cd $DR && drush solr-get-env-url 2>/dev/null`;
+                    chomp $solr_url;
+                    unless ($solr_url eq '') {
+                        $conf_info{$conf_file}{$ServerName}{'Solr'}{'url'} = $solr_url;
+                    }
+                    my $solr_mod_version = `cd $DR && drush pm-info apachesolr 2>/dev/null | grep 'Version'`;
+                    unless ($solr_mod_version eq '') {
+                        my @info = split(/\s+:\s+/, $solr_mod_version);
+                        $solr_mod_version = $info[1];
+                        $solr_mod_version =~ s/\s*$//g;
+                        $conf_info{$conf_file}{$ServerName}{'Solr'}{'version'} = $solr_mod_version;
+                    }
+                }
                 if ($opt->git) {
                     my $is_repo = `cd $DR && git rev-parse --is-inside-work-tree 2>&1 | head -1`;
                     chomp $is_repo;
@@ -392,6 +407,12 @@ sub printInfoHash {
                 } else {
                     printf $fstr, "Drupal", "No" if $opt->drupal;
                 } #END DRUPAL CHECK
+                if ( defined $InfoHash{$file}{$vhost}{'Solr'}{'version'} ) {
+                    printf $fstr, "Solr version", $InfoHash{$file}{$vhost}{'Solr'}{'version'};
+                }
+                if ( defined $InfoHash{$file}{$vhost}{'Solr'}{'url'} ) {
+                    printf $fstr, "Solr url", $InfoHash{$file}{$vhost}{'Solr'}{'url'};
+                }
                 if ( defined $InfoHash{$file}{$vhost}{'Git'}{'is_repository'} ) {
                     printf $fstr, "Git", $InfoHash{$file}{$vhost}{'Git'}{'is_repository'};
                     if ( defined $InfoHash{$file}{$vhost}{'Git'}{'remote_repo'} ) {
