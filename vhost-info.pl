@@ -542,15 +542,16 @@ sub ip_lookup_self {
     my $ip_service;
     print STDERR "Looking up IP\n";
     until ( defined $ip && $ip =~ /(\d{1,3}\.){3}\d{1,3}/ ) {
-        given (int(rand(6))) {
+        given (int(rand(8))) {
             when 0 { $ip_service = "http://tnx.nl/ip"; }
             when 1 { $ip_service = "http://icanhazip.com"; }
             when 2 { $ip_service = "http://ifconfig.me/ip"; }
             when 3 { $ip_service = "http://ip.appspot.com"; }
-            when 4 { $ip_service = "http://myip.dnsomatic.com"; }
-            when 5 { $ip_service = "http://www.showmyip.com/simple/"; }
-            when 6 { $ip_service = "https://secure.informaction.com/ipecho/"; }
-            when 7 { $ip_service = "http://automation.whatismyip.com/n09230945.asp"; }
+            when 4 { $ip_service = "http://ipecho.net/plain"; }
+            when 5 { $ip_service = "http://myip.dnsomatic.com"; }
+            when 6 { $ip_service = "http://ifaddress.appspot.com"; }
+            when 8 { $ip_service = "http://www.showmyip.com/simple"; }
+            when 7 { $ip_service = "https://secure.informaction.com/ipecho"; }
             else {}
         }
         print STDERR "Trying: $ip_service\n";
